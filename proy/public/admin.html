@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - GAPATA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --amarillo: #FFD000;
+            --negro: #1A1A1A;
+            --blanco: #FFFFFF;
+            --gris: #f5f5f5;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Oswald', 'Barlow Condensed', sans-serif;
+            background-color: var(--negro);
+            color: var(--negro);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background-color: var(--amarillo);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 3px solid var(--negro);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--negro);
+        }
+
+        .logout-btn {
+            background-color: var(--negro);
+            color: var(--amarillo);
+            border: none;
+            padding: 10px 20px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: inherit;
+            letter-spacing: 1px;
+        }
+
+        .logout-btn:hover {
+            background-color: var(--amarillo);
+            color: var(--negro);
+        }
+
+        /* Login Panel */
+        #loginPanel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--amarillo) 0%, var(--negro) 100%);
+        }
+
+        .login-card {
+            background-color: var(--blanco);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-card h2 {
+            color: var(--negro);
+            margin-bottom: 30px;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--negro);
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--negro);
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 12px;
+        }
+
+        .login-btn {
+            width: 100%;
+            background-color: var(--amarillo);
+            color: var(--negro);
+            border: 2px solid var(--negro);
+            padding: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: inherit;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            background-color: var(--negro);
+            color: var(--amarillo);
+        }
+
+        .error-message {
+            color: #d32f2f;
+            font-size: 12px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* Admin Panel */
+        #adminPanel {
+            display: none;
+            background-color: var(--blanco);
+            min-height: 100vh;
+        }
+
+        #adminPanel.show {
+            display: block;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 3px solid var(--negro);
+            background-color: var(--gris);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            background-color: var(--gris);
+            border: none;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--negro);
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .tab-btn:hover {
+            background-color: var(--amarillo);
+        }
+
+        .tab-btn.active {
+            background-color: var(--amarillo);
+            color: var(--negro);
+            border-bottom: 3px solid var(--negro);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        thead {
+            background-color: var(--negro);
+            color: var(--amarillo);
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--gris);
+            font-size: 12px;
+        }
+
+        tbody tr:hover {
+            background-color: var(--gris);
+        }
+
+        /* Input/Toggle in table */
+        input[type="text"],
+        input[type="number"],
+        input[type="checkbox"] {
+            padding: 6px;
+            border: 1px solid var(--negro);
+            border-radius: 2px;
+            font-family: inherit;
+            font-size: 12px;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--amarillo);
+        }
+
+        /* Toggle switch */
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--amarillo);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Buttons */
+        .save-btn {
+            background-color: var(--amarillo);
+            color: var(--negro);
+            border: 2px solid var(--negro);
+            padding: 12px 30px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: inherit;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .save-btn:hover {
+            background-color: var(--negro);
+            color: var(--amarillo);
+        }
+
+        .save-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Success/Error messages */
+        .message {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 12px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .success {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .error {
+            background-color: #d32f2f;
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            table {
+                font-size: 11px;
+            }
+
+            th, td {
+                padding: 8px;
+                font-size: 11px;
+            }
+
+            input[type="text"],
+            input[type="number"] {
+                padding: 4px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Panel -->
+    <div id="loginPanel">
+        <div class="login-card">
+            <h2>ADMIN PANEL</h2>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>Contraseña:</label>
+                    <input type="password" id="passwordInput" required>
+                </div>
+                <button type="submit" class="login-btn">ENTRAR</button>
+            </form>
+            <div id="loginError" class="error-message"></div>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel">
+        <div class="header">
+            <h1>ADMIN PANEL - GAPATA</h1>
+            <div style="display: flex; gap: 10px;">
+                <button class="logout-btn" onclick="resetHojas()" style="background-color: #d32f2f; color: white;">RESET DATOS</button>
+                <button class="logout-btn" onclick="logout()">CERRAR SESIÓN</button>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('productos')">PRODUCTOS</button>
+                <button class="tab-btn" onclick="switchTab('salsas')">SALSAS</button>
+            </div>
+
+            <!-- Tab: Productos -->
+            <div id="tab-productos" class="tab-content active">
+                <div id="productsMessage" class="message"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>NOMBRE</th>
+                            <th>TIPO</th>
+                            <th>VARIANTES</th>
+                            <th>PRECIOS</th>
+                            <th>FILETEADO INCLUIDO</th>
+                            <th>ACTIVO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsTable"></tbody>
+                </table>
+                <button class="save-btn" onclick="guardarProductos()" id="saveProductsBtn">GUARDAR PRODUCTOS</button>
+            </div>
+
+            <!-- Tab: Salsas -->
+            <div id="tab-salsas" class="tab-content">
+                <div id="salsasMessage" class="message"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>NOMBRE</th>
+                            <th>IMAGEN</th>
+                            <th>ACTIVO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salsasTable"></tbody>
+                </table>
+                <button class="save-btn" onclick="guardarSalsas()" id="saveSalsasBtn">GUARDAR SALSAS</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>

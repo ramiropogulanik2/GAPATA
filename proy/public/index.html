@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAPATA - Patas Premium</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <img src="images/logo.svg" alt="GAPATA Logo" class="logo">
+            <div class="header-text">
+                <h1>GAPATA</h1>
+                <p class="eslogan">PATAS PREMIUM · DESDE 2017</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-image">
+            <img src="images/pata-hero.svg" alt="Pata Premium">
+        </div>
+        <div class="hero-player">
+            <div class="player-card">
+                <div class="player-header">
+                    <span class="play-icon">▶</span>
+                    <span class="now-playing">NOW PLAYING</span>
+                </div>
+                <div class="player-title">UNA GAPATA POR FAVOR</div>
+                <div class="player-controls">
+                    <span>▸▸▸</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sección Elegí tu Pata -->
+    <section class="section-patas">
+        <div class="section-banner">ELEGÍ TU PATA</div>
+        <div class="patas-grid">
+            <!-- Card Cerdo -->
+            <div class="card-animal">
+                <div class="animal-icon">🐷</div>
+                <h3>CERDO</h3>
+
+                <div class="form-group">
+                    <label>Cantidad de personas:</label>
+                    <select id="selectCerdo" data-product="cerdo">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="0">10 personas</option>
+                        <option value="1">15 personas</option>
+                        <option value="2">20 personas</option>
+                        <option value="3">25 personas</option>
+                        <option value="4">30 personas</option>
+                        <option value="5">40 personas</option>
+                        <option value="6">50 personas</option>
+                        <option value="7">100 personas</option>
+                    </select>
+                </div>
+
+                <div class="precio-display" id="precioCerdo">Selecciona cantidad</div>
+
+                <div class="form-group">
+                    <label id="fileteadoLabelCerdo">
+                        <input type="checkbox" id="fileteadoCerdo" data-product="cerdo">
+                        <span id="fileteadoTextCerdo">+ Fileteado (+$100/persona)</span>
+                    </label>
+                </div>
+
+                <button class="btn-agregar" onclick="agregarAlCarrito('cerdo')">AGREGAR AL PEDIDO</button>
+            </div>
+
+            <!-- Card Vaca -->
+            <div class="card-animal">
+                <div class="animal-icon">🐮</div>
+                <h3>VACA</h3>
+
+                <div class="form-group">
+                    <label>Cantidad de personas:</label>
+                    <select id="selectVaca" data-product="vaca">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="0">10 personas</option>
+                        <option value="1">15 personas</option>
+                        <option value="2">20 personas</option>
+                        <option value="3">25 personas</option>
+                        <option value="4">30 personas</option>
+                        <option value="5">40 personas</option>
+                        <option value="6">50 personas</option>
+                        <option value="7">100 personas</option>
+                    </select>
+                </div>
+
+                <div class="precio-display" id="precioVaca">Selecciona cantidad</div>
+
+                <div class="form-group">
+                    <label id="fileteadoLabelVaca">
+                        <input type="checkbox" id="fileteadoVaca" data-product="vaca">
+                        <span id="fileteadoTextVaca">Incluido</span>
+                    </label>
+                </div>
+
+                <button class="btn-agregar" onclick="agregarAlCarrito('vaca')">AGREGAR AL PEDIDO</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sección Salsas -->
+    <section class="section-salsas">
+        <div class="section-banner">SALSAS</div>
+        <div class="salsas-grid" id="salsasGrid">
+            <!-- Generado por JavaScript -->
+        </div>
+    </section>
+
+    <!-- Sección Incluye -->
+    <section class="section-incluye">
+        <div class="section-banner">INCLUYE CON CADA PEDIDO</div>
+        <div class="incluye-content">
+            <p>• 5 PANES POR PERSONA</p>
+            <p>• LECHUGA</p>
+            <p>• TOMATE</p>
+            <p>• SALSAS</p>
+        </div>
+    </section>
+
+    <!-- Sección Contacto y Envíos -->
+    <section class="section-contacto">
+        <div class="contact-item">
+            <h3>WHATSAPP</h3>
+            <p><a href="https://wa.me/5493516622633" target="_blank">📱 +54 9 3516 622633</a></p>
+        </div>
+        <div class="contact-item">
+            <h3>ENVÍOS</h3>
+            <p>Zona norte de Córdoba: <strong>SIN COSTO</strong></p>
+            <p>Otras zonas: consultar costo</p>
+        </div>
+        <div class="contact-item">
+            <h3>MEDIOS DE PAGO</h3>
+            <p>Efectivo al entregar</p>
+            <p>Transferencia al entregar</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <img src="images/logo.svg" alt="GAPATA Logo" class="footer-logo">
+        <p>GAPATA · PATAS PREMIUM · DESDE 2017</p>
+    </footer>
+
+    <!-- Botón Carrito Flotante -->
+    <button class="carrito-flotante" id="btnCarrito">
+        <span class="carrito-icon">🛒</span>
+        <span class="carrito-contador" id="contadorCarrito">0</span>
+    </button>
+
+    <!-- Modal Carrito -->
+    <div class="carrito-modal" id="carritoModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="cerrarCarrito()">✕</button>
+            <h2>TU PEDIDO</h2>
+
+            <div class="carrito-items" id="carritoItems">
+                <p class="empty-cart">No hay items en el carrito</p>
+            </div>
+
+            <div class="carrito-total">
+                <strong>TOTAL: <span id="totalCarrito">$0</span></strong>
+            </div>
+
+            <div class="form-group">
+                <label>Nombre:</label>
+                <input type="text" id="inputNombre" placeholder="Tu nombre">
+            </div>
+
+            <div class="form-group">
+                <label>Teléfono:</label>
+                <input type="tel" id="inputTelefono" placeholder="Tu número de WhatsApp">
+            </div>
+
+            <button class="btn-enviar" onclick="enviarPedido()">ENVIAR PEDIDO POR WHATSAPP</button>
+
+            <div class="success-message" id="successMessage">
+                <p>✓ ¡Pedido enviado! Pronto te contactaremos.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay para cerrar modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="cerrarCarrito()"></div>
+
+    <!-- Confeti -->
+    <div class="confetti-container" id="confetti"></div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
