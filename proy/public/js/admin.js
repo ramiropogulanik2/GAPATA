@@ -1,14 +1,13 @@
 let productos = [];
 let salsas = [];
 
-// Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
 });
 
 async function checkAuth() {
     try {
-        const response = await fetch('/api/admin/session');
+        const response = await fetch('/api/admin/session', { credentials: 'include' });
         if (response.status === 401) {
             showLoginPanel();
         } else {
@@ -29,6 +28,7 @@ async function handleLogin(event) {
         const response = await fetch('/api/admin/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ password })
         });
 
@@ -37,8 +37,9 @@ async function handleLogin(event) {
             showAdminPanel();
             document.getElementById('passwordInput').value = '';
         } else {
+            const data = await response.json().catch(() => ({}));
             const errorMsg = document.getElementById('loginError');
-            errorMsg.textContent = 'Contraseña incorrecta';
+            errorMsg.textContent = data.error || 'Contraseña incorrecta';
             errorMsg.classList.add('show');
         }
     } catch (err) {
@@ -57,11 +58,12 @@ async function resetHojas() {
     try {
         const response = await fetch('/api/admin/reset-hojas', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
         });
 
         if (response.ok) {
-            alert('Datos reseteados. Recargarando página...');
+            alert('Datos reseteados. Recargando página...');
             location.reload();
         } else {
             alert('Error al resetear datos');
@@ -74,7 +76,7 @@ async function resetHojas() {
 
 async function logout() {
     try {
-        await fetch('/api/admin/logout', { method: 'POST' });
+        await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' });
     } finally {
         location.reload();
     }
@@ -134,7 +136,6 @@ function renderTablaProductos() {
 
     productos.forEach((producto, index) => {
         const row = document.createElement('tr');
-
         const variantes = producto.variantes ? producto.variantes.split('|') : [];
         const precios = producto.precios ? producto.precios.split('|') : [];
         const fileteadoIncluido = producto.fileteadoIncluido ? producto.fileteadoIncluido.split('|') : [];
@@ -235,6 +236,7 @@ async function guardarProductos() {
         const response = await fetch('/api/admin/productos', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify(productos)
         });
 
@@ -268,6 +270,7 @@ async function guardarSalsas() {
         const response = await fetch('/api/admin/salsas', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify(salsas)
         });
 
@@ -291,11 +294,8 @@ async function guardarSalsas() {
 }
 
 function switchTab(tab) {
-    // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-
-    // Show selected tab
     document.getElementById(`tab-${tab}`).classList.add('active');
     event.target.classList.add('active');
 }

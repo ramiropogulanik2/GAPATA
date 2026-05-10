@@ -1,4 +1,4 @@
-// Datos de productos (hardcoded default fallback)
+// Datos de productos (fallback si la API no responde)
 const PRODUCTOS = {
     cerdo: {
         nombre: 'Cerdo',
@@ -16,370 +16,405 @@ const PRODUCTOS = {
     }
 };
 
-// Función para cargar productos desde la API
+let SALSAS_DATA = [];
+
+// Estado del wizard
+const wizard = {
+    paso: 1,
+    tipoPata: null,       // 'cerdo' | 'vaca'
+    indiceVariante: null, // índice en el array de personas
+    tieneFileteado: false,
+    salsasSeleccionadas: {}
+};
+
+// ─── Inicialización ───────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await Promise.all([cargarProductosDelAPI(), cargarSalsasDelAPI()]);
+});
+
 async function cargarProductosDelAPI() {
     try {
         const response = await fetch('/api/productos');
-        if (response.ok) {
-            const data = await response.json();
-            // Mapear datos de API a estructura local
-            data.forEach(prod => {
-                const personas = prod.variantes.split('|').map(Number);
-                const precios = prod.precios.split('|').map(Number);
-                const fileteadoGratis = (prod.fileteadoIncluido || '').split('|').map(Number).filter(x => !isNaN(x));
-
-                if (prod.activo !== 'true' && prod.activo !== true) {
-                    return;
-                }
-
-                if (prod.tipo === 'cerdo') {
-                    PRODUCTOS.cerdo.personas = personas;
-                    PRODUCTOS.cerdo.precios = precios;
-                    PRODUCTOS.cerdo.fileteadoGratis = fileteadoGratis;
-                } else if (prod.tipo === 'vaca') {
-                    PRODUCTOS.vaca.personas = personas;
-                    PRODUCTOS.vaca.precios = precios;
-                    PRODUCTOS.vaca.fileteadoGratis = fileteadoGratis;
-                }
-            });
-        }
+        if (!response.ok) return;
+        const data = await response.json();
+        data.forEach(prod => {
+            if (prod.activo !== 'true' && prod.activo !== true) return;
+            const personas = prod.variantes.split('|').map(Number);
+            const precios = prod.precios.split('|').map(Number);
+            const fileteadoGratis = (prod.fileteadoIncluido || '').split('|').map(Number).filter(x => !isNaN(x));
+            if (prod.tipo === 'cerdo') {
+                Object.assign(PRODUCTOS.cerdo, { personas, precios, fileteadoGratis });
+            } else if (prod.tipo === 'vaca') {
+                Object.assign(PRODUCTOS.vaca, { personas, precios, fileteadoGratis });
+            }
+        });
     } catch (err) {
-        console.error('Error cargando productos de API:', err);
+        console.error('Error cargando productos:', err);
     }
 }
-
-let SALSAS = [
-    'Mayonesa Casera',
-    'Mayonesa con Ajo',
-    'Gapanesa',
-    'Palta',
-    'Ahumadita',
-    'Criolla',
-    'Garbanzos',
-    'Chimi',
-    'Cebolla Caramelizada'
-];
 
 async function cargarSalsasDelAPI() {
     try {
         const response = await fetch('/api/salsas');
-        if (response.ok) {
-            const data = await response.json();
-            const activas = data
-                .filter(salsa => salsa.activo === 'true' || salsa.activo === true)
-                .map(salsa => salsa.nombre)
-                .filter(Boolean);
-
-            if (activas.length > 0) {
-                SALSAS = activas;
-            }
-        }
-    } catch (err) {
-        console.error('Error cargando salsas de API:', err);
+        if (!response.ok) throw new Error('API error');
+        const data = await response.json();
+        const activas = data.filter(s => s.activo === 'true' || s.activo === true);
+        SALSAS_DATA = activas.length > 0 ? activas : salsasFallback();
+    } catch {
+        SALSAS_DATA = salsasFallback();
     }
 }
 
-let carrito = [];
+function salsasFallback() {
+    return [
+        { nombre: 'Mayonesa Casera', imagen: 'mayonesa-casera.jpg' },
+        { nombre: 'Mayonesa con Ajo', imagen: 'mayonesa-con-ajo.jpg' },
+        { nombre: 'Gapanesa', imagen: 'gapanesa.jpg' },
+        { nombre: 'Palta', imagen: 'palta.jpg' },
+        { nombre: 'Ahumadita', imagen: 'ahumadita.jpg' },
+        { nombre: 'Criolla', imagen: 'criolla.jpg' },
+        { nombre: 'Garbanzos', imagen: 'garbanzos.jpg' },
+        { nombre: 'Chimi', imagen: 'chimi.jpg' },
+        { nombre: 'Cebolla Caramelizada', imagen: 'cebolla-caramelizada.jpg' }
+    ];
+}
 
-// Inicializar la página
-document.addEventListener('DOMContentLoaded', () => {
-    Promise.all([cargarProductosDelAPI(), cargarSalsasDelAPI()]).then(() => {
-        inicializarSelects();
-        inicializarSalsas();
-        actualizarContadorCarrito();
+// ─── Navegación wizard ────────────────────────────────────────────────────────
+
+function irAPaso(numeroPaso) {
+    if (numeroPaso === 4 && wizard.indiceVariante === null) {
+        alert('Por favor, seleccioná una cantidad de personas');
+        return;
+    }
+
+    const pasoActual = document.getElementById(`paso-${wizard.paso}`);
+    const pasoNuevo = document.getElementById(`paso-${numeroPaso}`);
+    if (!pasoNuevo) return;
+
+    pasoActual.classList.add('saliendo');
+    setTimeout(() => {
+        pasoActual.classList.remove('active', 'saliendo');
+        pasoNuevo.classList.add('active');
+        wizard.paso = numeroPaso;
+        actualizarProgreso();
+
+        if (numeroPaso === 3) renderVariantes();
+        if (numeroPaso === 4) renderSalsas();
+        if (numeroPaso === 5) renderResumen();
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 200);
+}
+
+function irAPasoAnterior() {
+    if (wizard.paso > 1) irAPaso(wizard.paso - 1);
+}
+
+function actualizarProgreso() {
+    const progressBar = document.getElementById('progressBar');
+    const wizardNav = document.getElementById('wizardNav');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+
+    if (wizard.paso === 1) {
+        progressBar.classList.add('hidden');
+        wizardNav.classList.add('hidden');
+    } else {
+        progressBar.classList.remove('hidden');
+        wizardNav.classList.remove('hidden');
+        const pct = ((wizard.paso - 1) / 4) * 100;
+        progressFill.style.width = `${pct}%`;
+        progressText.textContent = `Paso ${wizard.paso - 1} de 4`;
+    }
+}
+
+// ─── Paso 2: Elegí tu pata ────────────────────────────────────────────────────
+
+function seleccionarAnimal(tipo) {
+    wizard.tipoPata = tipo;
+    wizard.indiceVariante = null;
+    wizard.tieneFileteado = false;
+
+    document.getElementById('cardCerdo').classList.toggle('seleccionado', tipo === 'cerdo');
+    document.getElementById('cardVaca').classList.toggle('seleccionado', tipo === 'vaca');
+
+    setTimeout(() => irAPaso(3), 250);
+}
+
+// ─── Paso 3: Cantidad y fileteado ─────────────────────────────────────────────
+
+function renderVariantes() {
+    const tipo = wizard.tipoPata;
+    const producto = PRODUCTOS[tipo];
+    const grid = document.getElementById('variantesGrid');
+    grid.innerHTML = '';
+
+    producto.personas.forEach((personas, indice) => {
+        const precio = producto.precios[indice];
+        const btn = document.createElement('button');
+        btn.className = 'variante-btn' + (wizard.indiceVariante === indice ? ' seleccionado' : '');
+        btn.innerHTML = `<span class="v-personas">${personas} personas</span><span class="v-precio">${formatearPrecio(precio)}</span>`;
+        btn.onclick = () => seleccionarVariante(indice);
+        grid.appendChild(btn);
     });
-});
 
-function inicializarSelects() {
-    const selectCerdo = document.getElementById('selectCerdo');
-    const selectVaca = document.getElementById('selectVaca');
-
-    selectCerdo.addEventListener('change', (e) => actualizarPrecio('cerdo', e.target.value));
-    selectVaca.addEventListener('change', (e) => actualizarPrecio('vaca', e.target.value));
-
-    // Inicializar estado del fileteado
-    actualizarEstadoFileteado('cerdo');
-    actualizarEstadoFileteado('vaca');
+    actualizarFileteado();
 }
 
-function actualizarPrecio(producto, indiceString) {
-    const indice = parseInt(indiceString);
-    const precioDisplay = document.getElementById(`precio${producto.charAt(0).toUpperCase() + producto.slice(1)}`);
-    const checkboxFileteado = document.getElementById(`fileteado${producto.charAt(0).toUpperCase() + producto.slice(1)}`);
+function seleccionarVariante(indice) {
+    wizard.indiceVariante = indice;
+    document.querySelectorAll('.variante-btn').forEach((btn, i) => {
+        btn.classList.toggle('seleccionado', i === indice);
+    });
+    actualizarFileteado();
+}
 
-    if (isNaN(indice)) {
-        precioDisplay.textContent = 'Selecciona cantidad';
+function actualizarFileteado() {
+    const tipo = wizard.tipoPata;
+    const indice = wizard.indiceVariante;
+    const checkbox = document.getElementById('checkFileteado');
+    const texto = document.getElementById('fileteadoTexto');
+
+    if (indice === null) {
+        checkbox.disabled = true;
+        checkbox.checked = false;
+        wizard.tieneFileteado = false;
         return;
     }
 
-    const precioUnitario = PRODUCTOS[producto].precios[indice];
-    precioDisplay.textContent = formatearPrecio(precioUnitario);
-
-    // Actualizar estado del fileteado
-    actualizarEstadoFileteado(producto, indice);
-}
-
-function actualizarEstadoFileteado(producto, indice = null) {
-    const checkboxFileteado = document.getElementById(`fileteado${producto.charAt(0).toUpperCase() + producto.slice(1)}`);
-    const labelFileteado = document.getElementById(`fileteadoLabel${producto.charAt(0).toUpperCase() + producto.slice(1)}`);
-    const textFileteado = document.getElementById(`fileteadoText${producto.charAt(0).toUpperCase() + producto.slice(1)}`);
-
-    if (indice === null || isNaN(indice)) {
-        checkboxFileteado.disabled = true;
-        textFileteado.textContent = '+ Fileteado (+$100/persona)';
-        return;
-    }
-
-    const esGratis = PRODUCTOS[producto].fileteadoGratis.includes(indice);
+    const esGratis = PRODUCTOS[tipo].fileteadoGratis.includes(indice);
 
     if (esGratis) {
-        checkboxFileteado.disabled = true;
-        checkboxFileteado.checked = true;
-        textFileteado.textContent = 'Incluido';
+        checkbox.disabled = true;
+        checkbox.checked = true;
+        texto.textContent = 'Fileteado incluido gratis';
+        wizard.tieneFileteado = true;
     } else {
-        checkboxFileteado.disabled = false;
-        checkboxFileteado.checked = false;
-        textFileteado.textContent = '+ Fileteado (+$100/persona)';
-    }
-}
-
-function inicializarSalsas() {
-    const salsasGrid = document.getElementById('salsasGrid');
-    salsasGrid.innerHTML = '';
-
-    SALSAS.forEach((salsa) => {
-        const inicial = salsa.charAt(0);
-        const salsaItem = document.createElement('div');
-        const salsaImagen = document.createElement('div');
-        const salsaNombre = document.createElement('div');
-        const checkbox = document.createElement('input');
-
-        salsaItem.className = 'salsa-item';
-        salsaImagen.className = 'salsa-imagen';
-        salsaNombre.className = 'salsa-nombre';
-        checkbox.type = 'checkbox';
-        checkbox.dataset.salsa = salsa;
-
-        salsaImagen.textContent = inicial;
-        salsaNombre.textContent = salsa;
-
-        salsaItem.appendChild(salsaImagen);
-        salsaItem.appendChild(salsaNombre);
-        salsaItem.appendChild(checkbox);
-        salsasGrid.appendChild(salsaItem);
-    });
-}
-
-function agregarAlCarrito(producto) {
-    const selectElement = document.getElementById(`select${producto.charAt(0).toUpperCase() + producto.slice(1)}`);
-    const indice = parseInt(selectElement.value);
-
-    if (isNaN(indice)) {
-        alert('Por favor, selecciona una cantidad');
-        return;
+        checkbox.disabled = false;
+        checkbox.checked = wizard.tieneFileteado && !esGratis ? wizard.tieneFileteado : false;
+        texto.textContent = '+ Fileteado (+$100/persona)';
+        wizard.tieneFileteado = checkbox.checked;
     }
 
-    const datos = PRODUCTOS[producto];
-    const cantidad = datos.personas[indice];
-    const precioUnitario = datos.precios[indice];
-
-    // Verificar salsas seleccionadas
-    const salsasSeleccionadas = Array.from(document.querySelectorAll('input[data-salsa]:checked'))
-        .map(checkbox => checkbox.getAttribute('data-salsa'));
-
-    // Fileteado
-    const checkboxFileteado = document.getElementById(`fileteado${producto.charAt(0).toUpperCase() + producto.slice(1)}`);
-    const tieneFileteado = checkboxFileteado.checked;
-
-    const item = {
-        id: Math.random(),
-        producto: `${datos.nombre} (${cantidad} personas)`,
-        cantidad: 1,
-        precioUnitario: precioUnitario,
-        detalles: {
-            cantidadPersonas: cantidad,
-            tieneFileteado: tieneFileteado,
-            salsas: salsasSeleccionadas
-        }
+    checkbox.onchange = () => {
+        wizard.tieneFileteado = checkbox.checked;
     };
-
-    carrito.push(item);
-    actualizarContadorCarrito();
-    actualizarVistaCarrito();
-
-    // Reset selects
-    selectElement.value = '';
-    actualizarPrecio(producto, '');
-
-    // Reset checkboxes de salsas
-    document.querySelectorAll('input[data-salsa]').forEach(cb => cb.checked = false);
-
-    // Abrir carrito
-    abrirCarrito();
 }
 
-function actualizarContadorCarrito() {
-    const contador = document.getElementById('contadorCarrito');
-    contador.textContent = carrito.length;
+// ─── Paso 4: Salsas ───────────────────────────────────────────────────────────
+
+function renderSalsas() {
+    const grid = document.getElementById('salsasGrid');
+    grid.innerHTML = '';
+
+    SALSAS_DATA.forEach(salsa => {
+        const cantidad = wizard.salsasSeleccionadas[salsa.nombre] || 0;
+        const div = document.createElement('div');
+        div.className = 'salsa-item' + (cantidad > 0 ? ' seleccionado' : '');
+
+        const inicial = salsa.nombre.charAt(0).toUpperCase();
+        const imgBase = salsa.imagen ? salsa.imagen.replace(/\.\w+$/, '') : '';
+        const imgSrc = imgBase ? `images/salsas/${imgBase}.jpg` : '';
+        div.innerHTML = `
+            <div class="salsa-imagen">
+                ${imgSrc
+                    ? `<img src="${imgSrc}" alt="${salsa.nombre}" onerror="this.style.display='none';this.parentElement.textContent='${inicial}'">`
+                    : inicial}
+            </div>
+            <div class="salsa-nombre">${salsa.nombre}</div>
+            <div class="salsa-cantidad-ctrl">
+                <button class="salsa-ctrl-btn salsa-menos${cantidad === 0 ? ' invisible' : ''}">−</button>
+                <span class="salsa-cnt">${cantidad > 0 ? cantidad : ''}</span>
+                <button class="salsa-ctrl-btn salsa-mas">+</button>
+            </div>
+        `;
+
+        div.querySelector('.salsa-menos').addEventListener('click', (e) => { e.stopPropagation(); ajustarSalsa(salsa.nombre, -1, div); });
+        div.querySelector('.salsa-mas').addEventListener('click', (e) => { e.stopPropagation(); ajustarSalsa(salsa.nombre, 1, div); });
+        div.addEventListener('click', () => { if ((wizard.salsasSeleccionadas[salsa.nombre] || 0) === 0) ajustarSalsa(salsa.nombre, 1, div); });
+
+        grid.appendChild(div);
+    });
+    actualizarContadorSalsas();
 }
 
-function actualizarVistaCarrito() {
-    const carritoItems = document.getElementById('carritoItems');
-    const totalCarrito = document.getElementById('totalCarrito');
+function ajustarSalsa(nombre, delta, card) {
+    const actual = wizard.salsasSeleccionadas[nombre] || 0;
+    const nueva = Math.max(0, actual + delta);
 
-    if (carrito.length === 0) {
-        carritoItems.innerHTML = '<p class="empty-cart">No hay items en el carrito</p>';
-        totalCarrito.textContent = '$0';
-        return;
+    if (nueva === 0) {
+        delete wizard.salsasSeleccionadas[nombre];
+    } else {
+        wizard.salsasSeleccionadas[nombre] = nueva;
     }
 
-    carritoItems.innerHTML = carrito.map(item => `
-        <div class="carrito-item">
-            <div class="item-info">
-                <div class="item-nombre">${item.producto}</div>
-                <div class="item-detalle">
-                    ${item.detalles.tieneFileteado ? '✓ Con Fileteado · ' : ''}
-                    ${item.detalles.salsas.length > 0 ? item.detalles.salsas.length + ' salsa(s)' : ''}
-                </div>
-            </div>
-            <div class="item-precio">${formatearPrecio(item.precioUnitario)}</div>
-            <button class="btn-eliminar" onclick="eliminarDelCarrito(${item.id})">✕</button>
+    card.classList.toggle('seleccionado', nueva > 0);
+    card.querySelector('.salsa-cnt').textContent = nueva > 0 ? nueva : '';
+    card.querySelector('.salsa-menos').classList.toggle('invisible', nueva === 0);
+    actualizarContadorSalsas();
+}
+
+function actualizarContadorSalsas() {
+    const el = document.getElementById('salsasContador');
+    if (!el) return;
+    const total = Object.values(wizard.salsasSeleccionadas).reduce((s, c) => s + c, 0);
+    if (total === 0) {
+        el.textContent = 'Ninguna salsa seleccionada';
+        el.classList.remove('tiene-seleccion');
+    } else {
+        el.textContent = `${total} porción${total === 1 ? '' : 'es'} seleccionada${total === 1 ? '' : 's'}`;
+        el.classList.add('tiene-seleccion');
+    }
+}
+
+// ─── Paso 5: Resumen y envío ──────────────────────────────────────────────────
+
+function renderResumen() {
+    const tipo = wizard.tipoPata;
+    const indice = wizard.indiceVariante;
+    const producto = PRODUCTOS[tipo];
+    const personas = producto.personas[indice];
+    const precio = producto.precios[indice];
+    const esGratis = producto.fileteadoGratis.includes(indice);
+    const costoFileteado = (wizard.tieneFileteado && !esGratis) ? personas * 100 : 0;
+    const total = precio + costoFileteado;
+
+    const salsasEntries = Object.entries(wizard.salsasSeleccionadas).filter(([, c]) => c > 0);
+    const salsasTexto = salsasEntries.length > 0
+        ? salsasEntries.map(([nombre, cant]) => cant > 1 ? `${nombre} ×${cant}` : nombre).join(', ')
+        : 'Sin salsas';
+
+    let fileteadoTexto = 'No';
+    if (wizard.tieneFileteado) {
+        fileteadoTexto = esGratis ? 'Incluido gratis' : '+' + formatearPrecio(costoFileteado);
+    }
+
+    document.getElementById('resumenCard').innerHTML = `
+        <div class="resumen-row">
+            <span class="resumen-label">${producto.emoji} PATA:</span>
+            <span class="resumen-valor">${producto.nombre} · ${personas} personas</span>
         </div>
-    `).join('');
-
-    const total = carrito.reduce((sum, item) => sum + item.precioUnitario, 0);
-    totalCarrito.textContent = formatearPrecio(total);
-}
-
-function eliminarDelCarrito(id) {
-    carrito = carrito.filter(item => item.id !== id);
-    actualizarContadorCarrito();
-    actualizarVistaCarrito();
-}
-
-function abrirCarrito() {
-    const modal = document.getElementById('carritoModal');
-    const overlay = document.getElementById('modalOverlay');
-    modal.classList.add('open');
-    overlay.classList.add('open');
-}
-
-function cerrarCarrito() {
-    const modal = document.getElementById('carritoModal');
-    const overlay = document.getElementById('modalOverlay');
-    modal.classList.remove('open');
-    overlay.classList.remove('open');
-
-    // Limpiar mensaje de éxito
-    const successMessage = document.getElementById('successMessage');
-    successMessage.classList.remove('show');
-}
-
-function formatearPrecio(precio) {
-    return '$' + precio.toLocaleString('es-AR');
+        <div class="resumen-row">
+            <span class="resumen-label">🔪 FILETEADO:</span>
+            <span class="resumen-valor">${fileteadoTexto}</span>
+        </div>
+        <div class="resumen-row">
+            <span class="resumen-label">🥫 SALSAS:</span>
+            <span class="resumen-valor">${salsasTexto}</span>
+        </div>
+        <div class="resumen-total">
+            <span>TOTAL</span>
+            <span>${formatearPrecio(total)}</span>
+        </div>
+    `;
 }
 
 async function enviarPedido() {
     const nombre = document.getElementById('inputNombre').value.trim();
     const telefono = document.getElementById('inputTelefono').value.trim();
 
-    // Validación
-    if (!nombre) {
-        alert('Por favor, completa tu nombre');
-        return;
-    }
+    if (!nombre) { alert('Por favor, completá tu nombre'); return; }
+    if (!telefono) { alert('Por favor, completá tu número de WhatsApp'); return; }
 
-    if (!telefono) {
-        alert('Por favor, completa tu número de WhatsApp');
-        return;
-    }
-
-    if (carrito.length === 0) {
-        alert('Por favor, agrega al menos un item al carrito');
-        return;
-    }
-
-    // Preparar datos
-    const total = carrito.reduce((sum, item) => sum + item.precioUnitario, 0);
-    const items = carrito.map(item => ({
-        cantidad: item.detalles.cantidadPersonas,
-        producto: item.producto,
-        precioUnitario: item.precioUnitario
-    }));
+    const tipo = wizard.tipoPata;
+    const indice = wizard.indiceVariante;
+    const producto = PRODUCTOS[tipo];
+    const personas = producto.personas[indice];
+    const precio = producto.precios[indice];
 
     const payload = {
         nombreCliente: nombre,
         telefonoCliente: telefono,
-        items: items,
-        total: total
+        salsas: Object.entries(wizard.salsasSeleccionadas)
+            .filter(([, c]) => c > 0)
+            .map(([nombre, cant]) => cant > 1 ? `${nombre} ×${cant}` : nombre),
+        items: [{
+            cantidad: personas,
+            producto: `${producto.nombre} (${personas} personas)`,
+            precioUnitario: precio,
+            tieneFileteado: wizard.tieneFileteado
+        }]
     };
 
-    const btnEnviar = document.querySelector('.btn-enviar');
-    btnEnviar.disabled = true;
-    btnEnviar.textContent = 'Enviando...';
+    const btn = document.querySelector('.btn-enviar');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
 
     try {
         const response = await fetch('/api/pedido', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
         const result = await response.json();
 
         if (response.ok && result.success) {
-            // Mostrar éxito
-            const successMessage = document.getElementById('successMessage');
-            successMessage.classList.add('show');
-
-            // Animar confeti
+            document.getElementById('successMessage').classList.add('show');
             animarConfeti();
 
-            // Limpiar carrito
             setTimeout(() => {
-                carrito = [];
-                actualizarContadorCarrito();
-                actualizarVistaCarrito();
-                document.getElementById('inputNombre').value = '';
-                document.getElementById('inputTelefono').value = '';
-                btnEnviar.disabled = false;
-                btnEnviar.textContent = 'ENVIAR PEDIDO POR WHATSAPP';
-
-                setTimeout(() => {
-                    cerrarCarrito();
-                }, 2000);
-            }, 1500);
+                resetWizard();
+                btn.disabled = false;
+                btn.textContent = 'ENVIAR PEDIDO POR WHATSAPP';
+            }, 3000);
         } else {
             alert('Error: ' + (result.error || 'No se pudo enviar el pedido'));
-            btnEnviar.disabled = false;
-            btnEnviar.textContent = 'ENVIAR PEDIDO POR WHATSAPP';
+            btn.disabled = false;
+            btn.textContent = 'ENVIAR PEDIDO POR WHATSAPP';
         }
     } catch (error) {
         console.error('Error:', error);
         alert('Error al enviar el pedido. Intenta de nuevo.');
-        btnEnviar.disabled = false;
-        btnEnviar.textContent = 'ENVIAR PEDIDO POR WHATSAPP';
+        btn.disabled = false;
+        btn.textContent = 'ENVIAR PEDIDO POR WHATSAPP';
     }
+}
+
+function resetWizard() {
+    wizard.paso = 1;
+    wizard.tipoPata = null;
+    wizard.indiceVariante = null;
+    wizard.tieneFileteado = false;
+    wizard.salsasSeleccionadas = {};
+
+    document.getElementById('inputNombre').value = '';
+    document.getElementById('inputTelefono').value = '';
+    document.getElementById('successMessage').classList.remove('show');
+    document.getElementById('cardCerdo').classList.remove('seleccionado');
+    document.getElementById('cardVaca').classList.remove('seleccionado');
+
+    document.querySelectorAll('.paso').forEach(p => p.classList.remove('active', 'saliendo'));
+    document.getElementById('paso-1').classList.add('active');
+    actualizarProgreso();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── Utilidades ───────────────────────────────────────────────────────────────
+
+function formatearPrecio(precio) {
+    return '$' + precio.toLocaleString('es-AR');
 }
 
 function animarConfeti() {
     const container = document.getElementById('confetti');
-    const colors = ['var(--amarillo)', 'var(--negro)', 'var(--blanco)'];
+    const colors = ['#FFD000', '#1A1A1A', '#FFFFFF', '#FFD000', '#FFB800'];
+    const shapes = ['2px', '50%', '0'];
 
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 70; i++) {
         const confetti = document.createElement('div');
         confetti.classList.add('confetti');
+        const size = Math.random() * 8 + 6;
         confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.top = '-20px';
+        confetti.style.width = size + 'px';
+        confetti.style.height = (Math.random() > 0.5 ? size : size * 2) + 'px';
         confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-        confetti.style.animationDuration = (Math.random() * 1.5 + 2) + 's';
-        confetti.style.animationDelay = Math.random() * 0.5 + 's';
+        confetti.style.borderRadius = shapes[Math.floor(Math.random() * shapes.length)];
+        confetti.style.animationDuration = (Math.random() * 1.8 + 2) + 's';
+        confetti.style.animationDelay = Math.random() * 0.8 + 's';
         container.appendChild(confetti);
-
-        setTimeout(() => confetti.remove(), 3000);
+        setTimeout(() => confetti.remove(), 4000);
     }
 }
-
-// Abrir carrito al hacer clic en botón flotante
-document.getElementById('btnCarrito').addEventListener('click', abrirCarrito);

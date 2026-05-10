@@ -1,32 +1,46 @@
-<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
-    <!-- Fondo amarillo -->
-    <rect width="400" height="300" fill="#FFD000"/>
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <rect width="400" height="400" fill="#FFD000"/>
 
-    <!-- Sándwich/Gapata -->
-    <!-- Pan superior (oscuro) -->
-    <ellipse cx="200" cy="80" rx="80" ry="30" fill="#8B7355"/>
+  <!-- Sándwich estilizado / grande -->
+  <!-- Pan superior -->
+  <ellipse cx="200" cy="130" rx="110" ry="42" fill="#C8965A"/>
+  <ellipse cx="200" cy="118" rx="104" ry="36" fill="#D4A46A"/>
+  <ellipse cx="200" cy="115" rx="98" ry="30" fill="#E0B278"/>
+  <!-- Semillas sesamo -->
+  <ellipse cx="168" cy="110" rx="5" ry="3" fill="#F5DEB3" opacity="0.8" transform="rotate(-20,168,110)"/>
+  <ellipse cx="200" cy="105" rx="5" ry="3" fill="#F5DEB3" opacity="0.8" transform="rotate(10,200,105)"/>
+  <ellipse cx="230" cy="110" rx="5" ry="3" fill="#F5DEB3" opacity="0.8" transform="rotate(-15,230,110)"/>
+  <ellipse cx="185" cy="120" rx="5" ry="3" fill="#F5DEB3" opacity="0.8" transform="rotate(25,185,120)"/>
+  <ellipse cx="215" cy="118" rx="5" ry="3" fill="#F5DEB3" opacity="0.8" transform="rotate(-5,215,118)"/>
 
-    <!-- Pan superior con textura -->
-    <circle cx="170" cy="75" r="6" fill="#A0826D" opacity="0.6"/>
-    <circle cx="200" cy="70" r="6" fill="#A0826D" opacity="0.6"/>
-    <circle cx="230" cy="75" r="6" fill="#A0826D" opacity="0.6"/>
+  <!-- Salsa ahumada (gris claro) derramándose -->
+  <path d="M130 168 Q145 160 150 170 Q162 158 170 168 Q182 155 190 165 Q205 155 215 165 Q228 155 238 162 Q252 158 268 165"
+        stroke="#C8C8C8" stroke-width="14" fill="none" stroke-linecap="round" opacity="0.85"/>
 
-    <!-- Relleno visible (carnes) -->
-    <ellipse cx="200" cy="150" rx="85" ry="50" fill="#D4654A"/>
+  <!-- Carne (pata) -->
+  <ellipse cx="200" cy="185" rx="105" ry="28" fill="#A0695A"/>
+  <ellipse cx="200" cy="180" rx="100" ry="22" fill="#B8705E"/>
+  <!-- Vetas -->
+  <path d="M110 180 Q150 175 200 180 Q240 182 290 178" stroke="#9A6050" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M120 186 Q165 183 210 186 Q248 185 280 183" stroke="#9A6050" stroke-width="1.5" fill="none" opacity="0.4"/>
 
-    <!-- Salsa roja -->
-    <path d="M 150 145 Q 155 155 160 150 Q 165 160 170 155 Q 175 165 180 158" stroke="#C41E3A" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <path d="M 210 158 Q 215 168 220 162 Q 225 172 230 165" stroke="#C41E3A" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Tomate -->
+  <ellipse cx="200" cy="208" rx="105" ry="18" fill="#E85C3A"/>
+  <path d="M100 208 Q130 202 160 208 Q190 212 220 208 Q250 202 300 208"
+        stroke="#CC4428" stroke-width="2" fill="none" opacity="0.5"/>
 
-    <!-- Lechuga (verde) -->
-    <ellipse cx="200" cy="135" rx="75" ry="15" fill="#6BA82C"/>
-    <path d="M 140 135 Q 150 130 160 135 Q 170 130 180 135 Q 190 130 200 135 Q 210 130 220 135 Q 230 130 240 135 Q 250 130 260 135" stroke="#5A8C1F" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Lechuga -->
+  <ellipse cx="200" cy="228" rx="115" ry="18" fill="#7AC444"/>
+  <path d="M90 228 Q110 220 130 228 Q150 222 170 228 Q190 220 210 228 Q230 222 250 228 Q270 220 310 228"
+        stroke="#5A9C28" stroke-width="2.5" fill="none" stroke-linecap="round"/>
 
-    <!-- Pan inferior (oscuro) -->
-    <ellipse cx="200" cy="220" rx="80" ry="25" fill="#8B7355"/>
+  <!-- Pan inferior -->
+  <ellipse cx="200" cy="258" rx="110" ry="28" fill="#C8965A"/>
+  <ellipse cx="200" cy="268" rx="108" ry="22" fill="#D4A46A"/>
 
-    <!-- Pan inferior con textura -->
-    <circle cx="170" cy="225" r="6" fill="#A0826D" opacity="0.6"/>
-    <circle cx="200" cy="230" r="6" fill="#A0826D" opacity="0.6"/>
-    <circle cx="230" cy="225" r="6" fill="#A0826D" opacity="0.6"/>
+  <!-- Texto PEDI LA TUYA abajo -->
+  <text x="200" y="330" text-anchor="middle" font-size="18" font-weight="700"
+        fill="#1A1A1A" letter-spacing="6" opacity="0.55">PEDI LA TUYA</text>
+  <text x="200" y="355" text-anchor="middle" font-size="11" font-weight="400"
+        fill="#1A1A1A" letter-spacing="4" opacity="0.35">PATAS PREMIUM · DESDE 2017</text>
 </svg>
