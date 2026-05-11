@@ -34,7 +34,7 @@
 
     <!-- Navegación wizard (pasos 2-5) -->
     <div id="wizardNav" class="wizard-nav hidden">
-        <button class="btn-atras" onclick="irAPasoAnterior()">← ATRÁS</button>
+        <button class="btn-atras" id="btnAtras">← ATRÁS</button>
     </div>
 
     <!-- ══════════════════════════════════════════
@@ -48,7 +48,7 @@
             <div class="hero-content">
                 <p class="hero-eslogan">PATAS PREMIUM · DESDE 2017</p>
                 <h2 class="hero-titulo">GAPATA</h2>
-                <button class="btn-cta" onclick="irAPaso(2)">ARMAR TU PEDIDO</button>
+                <button class="btn-cta" id="btnArmarPedido">ARMAR TU PEDIDO</button>
             </div>
             <div class="hero-player">
                 <div class="player-card">
@@ -60,7 +60,7 @@
                     </div>
                     <div class="player-now-playing">Now Playing</div>
                     <div class="player-photo">
-                        <img src="images/hero-producto2.jpg" alt="Gapata" onerror="this.parentElement.style.background='#1A1A1A'">
+                        <img src="images/hero-producto2.jpg" alt="Gapata" id="playerPhoto">
                     </div>
                     <div class="player-title">UNA GAPATA POR FAVOR</div>
                     <div class="player-progress">
@@ -101,8 +101,7 @@
 
         <section class="section-galeria">
             <div class="galeria-foto galeria-ingredientes">
-                <img src="images/alLadoScrabble.jpg" class="img-product" alt="Gapata"
-                     onerror="this.src='images/ingredientes.jpg'">
+                <img src="images/alLadoScrabble.jpg" class="img-product" alt="Gapata" id="galeriaImg1">
             </div>
             <div class="galeria-foto galeria-scrabble">
                 <img src="images/srabble.jpg" class="img-product" alt="GAPATA">
@@ -140,12 +139,12 @@
         <div class="paso-container">
             <h2 class="paso-titulo">ELEGÍ TU PATA</h2>
             <div class="animal-cards">
-                <div class="animal-card" id="cardCerdo" onclick="seleccionarAnimal('cerdo')">
+                <div class="animal-card" id="cardCerdo">
                     <span class="card-check">✓</span>
                     <div class="animal-emoji">🐷</div>
                     <div class="animal-nombre">CERDO</div>
                 </div>
-                <div class="animal-card" id="cardVaca" onclick="seleccionarAnimal('vaca')">
+                <div class="animal-card" id="cardVaca">
                     <span class="card-check">✓</span>
                     <div class="animal-emoji">🐮</div>
                     <div class="animal-nombre">VACA</div>
@@ -167,7 +166,7 @@
                     <span id="fileteadoTexto">+ Fileteado (+$100/persona)</span>
                 </label>
             </div>
-            <button class="btn-siguiente" onclick="irAPaso(4)">SIGUIENTE →</button>
+            <button class="btn-siguiente" id="btnSig3">SIGUIENTE →</button>
         </div>
     </div>
 
@@ -180,7 +179,7 @@
             <p class="paso-subtitulo">Podés elegir todas las que quieras</p>
             <div class="salsas-grid" id="salsasGrid"></div>
             <p class="salsas-contador" id="salsasContador">Ninguna salsa seleccionada</p>
-            <button class="btn-siguiente" onclick="irAPaso(5)">SIGUIENTE →</button>
+            <button class="btn-siguiente" id="btnSig4">SIGUIENTE →</button>
         </div>
     </div>
 
@@ -203,7 +202,7 @@
                 <input type="tel" id="inputTelefono" placeholder="Ej: 3516123456" autocomplete="tel">
             </div>
 
-            <button class="btn-enviar" onclick="enviarPedido()">ENVIAR PEDIDO POR WHATSAPP</button>
+            <button class="btn-enviar" id="btnEnviar">ENVIAR PEDIDO POR WHATSAPP</button>
 
             <div class="success-message" id="successMessage">
                 <p>✓ ¡Pedido enviado! Pronto te contactamos.</p>

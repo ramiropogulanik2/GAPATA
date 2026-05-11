@@ -2,8 +2,19 @@ let productos = [];
 let salsas = [];
 
 document.addEventListener('DOMContentLoaded', () => {
+    bindAdminListeners();
     checkAuth();
 });
+
+function bindAdminListeners() {
+    document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    document.getElementById('btnReset').addEventListener('click', resetHojas);
+    document.getElementById('btnLogout').addEventListener('click', logout);
+    document.getElementById('tabBtnProductos').addEventListener('click', (e) => switchTab('productos', e.currentTarget));
+    document.getElementById('tabBtnSalsas').addEventListener('click', (e) => switchTab('salsas', e.currentTarget));
+    document.getElementById('saveProductsBtn').addEventListener('click', guardarProductos);
+    document.getElementById('saveSalsasBtn').addEventListener('click', guardarSalsas);
+}
 
 async function checkAuth() {
     try {
@@ -130,47 +141,85 @@ async function cargarSalsas() {
     }
 }
 
+function crearInput(tipo, valor, placeholder) {
+    const input = document.createElement('input');
+    input.type = tipo;
+    if (valor !== undefined) input.value = valor;
+    if (placeholder) input.placeholder = placeholder;
+    return input;
+}
+
 function renderTablaProductos() {
     const tbody = document.getElementById('productsTable');
     tbody.innerHTML = '';
 
     productos.forEach((producto, index) => {
-        const row = document.createElement('tr');
+        const tr = document.createElement('tr');
         const variantes = producto.variantes ? producto.variantes.split('|') : [];
         const precios = producto.precios ? producto.precios.split('|') : [];
         const fileteadoIncluido = producto.fileteadoIncluido ? producto.fileteadoIncluido.split('|') : [];
         const activo = producto.activo === 'true' || producto.activo === true;
 
-        row.innerHTML = `
-            <td><input type="text" value="${escapeHtml(producto.nombre)}" onchange="updateProducto(${index}, 'nombre', this.value)"></td>
-            <td><input type="text" value="${escapeHtml(producto.tipo)}" onchange="updateProducto(${index}, 'tipo', this.value)"></td>
-            <td style="font-size: 11px;">${variantes.join(', ')}</td>
-            <td>
-                <div style="max-height: 100px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
-                    ${variantes.map((v, i) => `
-                        <input type="text" value="${escapeHtml(precios[i] || '')}" placeholder="Personas: ${escapeHtml(v)}" onchange="updateProducto(${index}, 'precio', ${i}, this.value)" style="width: 100%;">
-                    `).join('')}
-                </div>
-            </td>
-            <td>
-                <div style="max-height: 100px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
-                    ${variantes.map((v, i) => `
-                        <label style="display: flex; align-items: center; gap: 5px; font-size: 11px;">
-                            <input type="checkbox" ${fileteadoIncluido.includes(String(i)) ? 'checked' : ''} onchange="updateProducto(${index}, 'fileteado', ${i}, this.checked)">
-                            ${escapeHtml(v)} personas
-                        </label>
-                    `).join('')}
-                </div>
-            </td>
-            <td>
-                <label class="toggle">
-                    <input type="checkbox" ${activo ? 'checked' : ''} onchange="updateProducto(${index}, 'activo', this.checked)">
-                    <span class="slider"></span>
-                </label>
-            </td>
-        `;
+        // Nombre
+        const tdNombre = document.createElement('td');
+        const inputNombre = crearInput('text', producto.nombre || '');
+        inputNombre.addEventListener('change', (e) => updateProducto(index, 'nombre', null, e.target.value));
+        tdNombre.appendChild(inputNombre);
 
-        tbody.appendChild(row);
+        // Tipo
+        const tdTipo = document.createElement('td');
+        const inputTipo = crearInput('text', producto.tipo || '');
+        inputTipo.addEventListener('change', (e) => updateProducto(index, 'tipo', null, e.target.value));
+        tdTipo.appendChild(inputTipo);
+
+        // Variantes (solo lectura)
+        const tdVariantes = document.createElement('td');
+        tdVariantes.style.fontSize = '11px';
+        tdVariantes.textContent = variantes.join(', ');
+
+        // Precios
+        const tdPrecios = document.createElement('td');
+        const divPrecios = document.createElement('div');
+        divPrecios.style.cssText = 'max-height:100px;overflow-y:auto;display:flex;flex-direction:column;gap:4px';
+        variantes.forEach((v, i) => {
+            const input = crearInput('text', precios[i] || '', `Personas: ${v}`);
+            input.style.width = '100%';
+            input.addEventListener('change', (e) => updateProducto(index, 'precio', i, e.target.value));
+            divPrecios.appendChild(input);
+        });
+        tdPrecios.appendChild(divPrecios);
+
+        // Fileteado incluido
+        const tdFileteado = document.createElement('td');
+        const divFileteado = document.createElement('div');
+        divFileteado.style.cssText = 'max-height:100px;overflow-y:auto;display:flex;flex-direction:column;gap:4px';
+        variantes.forEach((v, i) => {
+            const label = document.createElement('label');
+            label.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px';
+            const cb = crearInput('checkbox');
+            cb.checked = fileteadoIncluido.includes(String(i));
+            cb.addEventListener('change', (e) => updateProducto(index, 'fileteado', i, e.target.checked));
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(`${escapeHtml(v)} personas`));
+            divFileteado.appendChild(label);
+        });
+        tdFileteado.appendChild(divFileteado);
+
+        // Activo toggle
+        const tdActivo = document.createElement('td');
+        const toggleLabel = document.createElement('label');
+        toggleLabel.className = 'toggle';
+        const toggleCb = crearInput('checkbox');
+        toggleCb.checked = activo;
+        toggleCb.addEventListener('change', (e) => updateProducto(index, 'activo', null, e.target.checked));
+        const toggleSpan = document.createElement('span');
+        toggleSpan.className = 'slider';
+        toggleLabel.appendChild(toggleCb);
+        toggleLabel.appendChild(toggleSpan);
+        tdActivo.appendChild(toggleLabel);
+
+        tr.append(tdNombre, tdTipo, tdVariantes, tdPrecios, tdFileteado, tdActivo);
+        tbody.appendChild(tr);
     });
 }
 
@@ -179,21 +228,36 @@ function renderTablaSalsas() {
     tbody.innerHTML = '';
 
     salsas.forEach((salsa, index) => {
-        const row = document.createElement('tr');
+        const tr = document.createElement('tr');
         const activo = salsa.activo === 'true' || salsa.activo === true;
 
-        row.innerHTML = `
-            <td><input type="text" value="${escapeHtml(salsa.nombre)}" onchange="updateSalsa(${index}, 'nombre', this.value)"></td>
-            <td><input type="text" value="${escapeHtml(salsa.imagen)}" onchange="updateSalsa(${index}, 'imagen', this.value)"></td>
-            <td>
-                <label class="toggle">
-                    <input type="checkbox" ${activo ? 'checked' : ''} onchange="updateSalsa(${index}, 'activo', this.checked)">
-                    <span class="slider"></span>
-                </label>
-            </td>
-        `;
+        // Nombre
+        const tdNombre = document.createElement('td');
+        const inputNombre = crearInput('text', salsa.nombre || '');
+        inputNombre.addEventListener('change', (e) => updateSalsa(index, 'nombre', e.target.value));
+        tdNombre.appendChild(inputNombre);
 
-        tbody.appendChild(row);
+        // Imagen
+        const tdImagen = document.createElement('td');
+        const inputImagen = crearInput('text', salsa.imagen || '');
+        inputImagen.addEventListener('change', (e) => updateSalsa(index, 'imagen', e.target.value));
+        tdImagen.appendChild(inputImagen);
+
+        // Activo toggle
+        const tdActivo = document.createElement('td');
+        const toggleLabel = document.createElement('label');
+        toggleLabel.className = 'toggle';
+        const toggleCb = crearInput('checkbox');
+        toggleCb.checked = activo;
+        toggleCb.addEventListener('change', (e) => updateSalsa(index, 'activo', e.target.checked));
+        const toggleSpan = document.createElement('span');
+        toggleSpan.className = 'slider';
+        toggleLabel.appendChild(toggleCb);
+        toggleLabel.appendChild(toggleSpan);
+        tdActivo.appendChild(toggleLabel);
+
+        tr.append(tdNombre, tdImagen, tdActivo);
+        tbody.appendChild(tr);
     });
 }
 
@@ -201,7 +265,7 @@ function updateProducto(index, field, subIndex, value) {
     if (field === 'nombre' || field === 'tipo') {
         productos[index][field] = value;
     } else if (field === 'precio') {
-        let precios = productos[index].precios.split('|');
+        const precios = productos[index].precios.split('|');
         precios[subIndex] = value;
         productos[index].precios = precios.join('|');
     } else if (field === 'fileteado') {
@@ -209,7 +273,7 @@ function updateProducto(index, field, subIndex, value) {
         const idxStr = String(subIndex);
         if (value && !fileteado.includes(idxStr)) {
             fileteado.push(idxStr);
-        } else if (!value && fileteado.includes(idxStr)) {
+        } else if (!value) {
             fileteado = fileteado.filter(x => x !== idxStr);
         }
         productos[index].fileteadoIncluido = fileteado.join('|');
@@ -219,9 +283,10 @@ function updateProducto(index, field, subIndex, value) {
 }
 
 function updateSalsa(index, field, value) {
-    salsas[index][field] = value;
     if (field === 'activo') {
         salsas[index].activo = value ? 'true' : 'false';
+    } else {
+        salsas[index][field] = value;
     }
 }
 
@@ -293,9 +358,9 @@ async function guardarSalsas() {
     }
 }
 
-function switchTab(tab) {
+function switchTab(tab, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-${tab}`).classList.add('active');
-    event.target.classList.add('active');
+    btn.classList.add('active');
 }

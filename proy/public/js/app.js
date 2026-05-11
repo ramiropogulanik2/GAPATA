@@ -30,8 +30,28 @@ const wizard = {
 // ─── Inicialización ───────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
+    bindEventListeners();
     await Promise.all([cargarProductosDelAPI(), cargarSalsasDelAPI()]);
 });
+
+function bindEventListeners() {
+    document.getElementById('btnArmarPedido').addEventListener('click', () => irAPaso(2));
+    document.getElementById('btnAtras').addEventListener('click', irAPasoAnterior);
+    document.getElementById('cardCerdo').addEventListener('click', () => seleccionarAnimal('cerdo'));
+    document.getElementById('cardVaca').addEventListener('click', () => seleccionarAnimal('vaca'));
+    document.getElementById('btnSig3').addEventListener('click', () => irAPaso(4));
+    document.getElementById('btnSig4').addEventListener('click', () => irAPaso(5));
+    document.getElementById('btnEnviar').addEventListener('click', enviarPedido);
+
+    const playerPhoto = document.getElementById('playerPhoto');
+    if (playerPhoto) {
+        playerPhoto.addEventListener('error', () => { playerPhoto.parentElement.style.background = '#1A1A1A'; });
+    }
+    const galeriaImg1 = document.getElementById('galeriaImg1');
+    if (galeriaImg1) {
+        galeriaImg1.addEventListener('error', () => { galeriaImg1.src = 'images/ingredientes.jpg'; });
+    }
+}
 
 async function cargarProductosDelAPI() {
     try {
@@ -337,7 +357,7 @@ async function enviarPedido() {
         }]
     };
 
-    const btn = document.querySelector('.btn-enviar');
+    const btn = document.getElementById('btnEnviar');
     btn.disabled = true;
     btn.textContent = 'Enviando...';
 

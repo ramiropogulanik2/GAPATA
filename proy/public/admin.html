@@ -371,7 +371,7 @@
     <div id="loginPanel">
         <div class="login-card">
             <h2>ADMIN PANEL</h2>
-            <form onsubmit="handleLogin(event)">
+            <form id="loginForm">
                 <div class="form-group">
                     <label>Contraseña:</label>
                     <input type="password" id="passwordInput" required>
@@ -387,16 +387,16 @@
         <div class="header">
             <h1>ADMIN PANEL - GAPATA</h1>
             <div style="display: flex; gap: 10px;">
-                <button class="logout-btn" onclick="resetHojas()" style="background-color: #d32f2f; color: white;">RESET DATOS</button>
-                <button class="logout-btn" onclick="logout()">CERRAR SESIÓN</button>
+                <button class="logout-btn" id="btnReset" style="background-color: #d32f2f; color: white;">RESET DATOS</button>
+                <button class="logout-btn" id="btnLogout">CERRAR SESIÓN</button>
             </div>
         </div>
 
         <div class="container">
             <!-- Tabs -->
             <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('productos')">PRODUCTOS</button>
-                <button class="tab-btn" onclick="switchTab('salsas')">SALSAS</button>
+                <button class="tab-btn active" id="tabBtnProductos">PRODUCTOS</button>
+                <button class="tab-btn" id="tabBtnSalsas">SALSAS</button>
             </div>
 
             <!-- Tab: Productos -->
@@ -415,7 +415,7 @@
                     </thead>
                     <tbody id="productsTable"></tbody>
                 </table>
-                <button class="save-btn" onclick="guardarProductos()" id="saveProductsBtn">GUARDAR PRODUCTOS</button>
+                <button class="save-btn" id="saveProductsBtn">GUARDAR PRODUCTOS</button>
             </div>
 
             <!-- Tab: Salsas -->
@@ -431,7 +431,7 @@
                     </thead>
                     <tbody id="salsasTable"></tbody>
                 </table>
-                <button class="save-btn" onclick="guardarSalsas()" id="saveSalsasBtn">GUARDAR SALSAS</button>
+                <button class="save-btn" id="saveSalsasBtn">GUARDAR SALSAS</button>
             </div>
         </div>
     </div>
