@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GAPATA - Patas Premium</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,17 +22,17 @@
         </div>
     </header>
 
-    <!-- Barra de progreso (pasos 2-5) -->
+    <!-- Barra de progreso (pasos 2-6) -->
     <div id="progressBar" class="progress-bar hidden">
         <div class="progress-steps">
-            <span id="progressText">Paso 1 de 4</span>
+            <span id="progressText">Paso 1 de 5</span>
         </div>
         <div class="progress-track">
             <div class="progress-fill" id="progressFill"></div>
         </div>
     </div>
 
-    <!-- Navegación wizard (pasos 2-5) -->
+    <!-- Navegación wizard (pasos 2-6) -->
     <div id="wizardNav" class="wizard-nav hidden">
         <button class="btn-atras" id="btnAtras">← ATRÁS</button>
     </div>
@@ -184,13 +184,67 @@
     </div>
 
     <!-- ══════════════════════════════════════════
-         PASO 5 — Datos y resumen
+         PASO 5 — Dirección de entrega
     ══════════════════════════════════════════ -->
     <div id="paso-5" class="paso">
+        <div class="paso-container">
+            <h2 class="paso-titulo">DIRECCIÓN DE ENTREGA</h2>
+
+            <div class="form-group">
+                <label>CALLE:</label>
+                <input type="text" id="inputCalle" placeholder="Nombre de la calle" autocomplete="address-line1">
+            </div>
+
+            <div class="form-group">
+                <label>NÚMERO:</label>
+                <input type="text" id="inputNumeroCalle" placeholder="Altura" autocomplete="address-line2">
+            </div>
+
+            <div class="form-group">
+                <label>PISO / DEPTO (opcional):</label>
+                <input type="text" id="inputPiso" placeholder="Ej: 3° B">
+            </div>
+
+            <div class="form-group">
+                <label>OBSERVACIONES (opcional):</label>
+                <textarea id="inputObservaciones" rows="3" placeholder="Aclaración sobre el pedido, referencias, etc."></textarea>
+            </div>
+
+            <button class="btn-siguiente" id="btnSig5">SIGUIENTE →</button>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         PASO 6 — Datos y resumen
+    ══════════════════════════════════════════ -->
+    <div id="paso-6" class="paso">
         <div class="paso-container">
             <h2 class="paso-titulo">TU PEDIDO</h2>
 
             <div class="resumen-card" id="resumenCard"></div>
+
+            <div class="fecha-entrega-grupo">
+                <div class="form-group">
+                    <label>MES:</label>
+                    <select id="selectMes" class="select-fecha">
+                        <option value="" disabled selected>Elegí el mes</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="grupoDia" style="display:none;">
+                    <label>DÍA:</label>
+                    <select id="selectDia" class="select-fecha">
+                        <option value="" disabled selected>Elegí el día</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="grupoHora" style="display:none;">
+                    <label>HORA:</label>
+                    <select id="selectHora" class="select-fecha">
+                        <option value="" disabled selected>Elegí la hora</option>
+                    </select>
+                </div>
+            </div>
 
             <div class="form-group">
                 <label>NOMBRE:</label>
@@ -213,6 +267,22 @@
     <!-- Confeti -->
     <div class="confetti-container" id="confetti"></div>
 
+    <!-- Modal de alerta / confirmación (reemplaza alert()/confirm() nativos) -->
+    <div id="modal-alerta" class="modal-alerta-overlay">
+        <div class="modal-alerta-card">
+            <div class="modal-alerta-header">
+                <span class="modal-alerta-icono" id="modalAlertaIcono">⚠️</span>
+                <h3 class="modal-alerta-titulo" id="modalAlertaTitulo">Atención</h3>
+            </div>
+            <p class="modal-alerta-mensaje" id="modalAlertaMensaje"></p>
+            <div class="modal-alerta-botones">
+                <button class="modal-alerta-btn modal-alerta-btn-cancelar" id="modalAlertaCancelar">CANCELAR</button>
+                <button class="modal-alerta-btn modal-alerta-btn-aceptar" id="modalAlertaAceptar">ACEPTAR</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/modalAlerta.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

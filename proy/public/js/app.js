@@ -16,7 +16,19 @@ const PRODUCTOS = {
     }
 };
 
+// Límite de salsas según la cantidad de personas del pedido
+const LIMITE_SALSAS = {
+    10: 5, 15: 6, 20: 7, 25: 8, 30: 9,
+    40: 10, 50: 12, 60: 14, 70: 16, 80: 18, 90: 20, 100: 22
+};
+
 let SALSAS_DATA = [];
+
+// Meses del año en español, en el orden usado por el selector de fecha de entrega
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+// Cantidad de días de cada mes (Febrero fijo en 28: no se pide el año de entrega)
+const DIAS_POR_MES = { Enero: 31, Febrero: 28, Marzo: 31, Abril: 30, Mayo: 31, Junio: 30, Julio: 31, Agosto: 31, Septiembre: 30, Octubre: 31, Noviembre: 30, Diciembre: 31 };
 
 // Estado del wizard
 const wizard = {
@@ -24,13 +36,16 @@ const wizard = {
     tipoPata: null,       // 'cerdo' | 'vaca'
     indiceVariante: null, // índice en el array de personas
     tieneFileteado: false,
-    salsasSeleccionadas: {}
+    salsasSeleccionadas: {},
+    direccion: { calle: '', numero: '', piso: '', observaciones: '' },
+    fechaEntrega: { mes: null, dia: null, hora: null }
 };
 
 // ─── Inicialización ───────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
     bindEventListeners();
+    inicializarFechaEntrega();
     await Promise.all([cargarProductosDelAPI(), cargarSalsasDelAPI()]);
 });
 
@@ -41,6 +56,7 @@ function bindEventListeners() {
     document.getElementById('cardVaca').addEventListener('click', () => seleccionarAnimal('vaca'));
     document.getElementById('btnSig3').addEventListener('click', () => irAPaso(4));
     document.getElementById('btnSig4').addEventListener('click', () => irAPaso(5));
+    document.getElementById('btnSig5').addEventListener('click', continuarDireccion);
     document.getElementById('btnEnviar').addEventListener('click', enviarPedido);
 
     const playerPhoto = document.getElementById('playerPhoto');
@@ -104,7 +120,7 @@ function salsasFallback() {
 
 function irAPaso(numeroPaso) {
     if (numeroPaso === 4 && wizard.indiceVariante === null) {
-        alert('Por favor, seleccioná una cantidad de personas');
+        mostrarAlerta('Por favor, seleccioná una cantidad de personas');
         return;
     }
 
@@ -121,10 +137,10 @@ function irAPaso(numeroPaso) {
 
         if (numeroPaso === 3) renderVariantes();
         if (numeroPaso === 4) renderSalsas();
-        if (numeroPaso === 5) renderResumen();
+        if (numeroPaso === 6) renderResumen();
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 200);
+    }, 150);
 }
 
 function irAPasoAnterior() {
@@ -143,9 +159,9 @@ function actualizarProgreso() {
     } else {
         progressBar.classList.remove('hidden');
         wizardNav.classList.remove('hidden');
-        const pct = ((wizard.paso - 1) / 4) * 100;
+        const pct = ((wizard.paso - 1) / 5) * 100;
         progressFill.style.width = `${pct}%`;
-        progressText.textContent = `Paso ${wizard.paso - 1} de 4`;
+        progressText.textContent = `Paso ${wizard.paso - 1} de 5`;
     }
 }
 
@@ -228,6 +244,12 @@ function renderSalsas() {
     const grid = document.getElementById('salsasGrid');
     grid.innerHTML = '';
 
+    const personas = PRODUCTOS[wizard.tipoPata].personas[wizard.indiceVariante];
+    const limite = LIMITE_SALSAS[personas] || 5;
+
+    const subtitulo = document.querySelector('#paso-4 .paso-subtitulo');
+    if (subtitulo) subtitulo.textContent = `Podés elegir hasta ${limite} salsas para tu pedido`;
+
     SALSAS_DATA.forEach(salsa => {
         const cantidad = wizard.salsasSeleccionadas[salsa.nombre] || 0;
         const div = document.createElement('div');
@@ -260,6 +282,16 @@ function renderSalsas() {
 }
 
 function ajustarSalsa(nombre, delta, card) {
+    if (delta > 0) {
+        const personas = PRODUCTOS[wizard.tipoPata].personas[wizard.indiceVariante];
+        const limite = LIMITE_SALSAS[personas] || 5;
+        const totalActual = Object.values(wizard.salsasSeleccionadas).reduce((s, c) => s + c, 0);
+        if (totalActual >= limite) {
+            mostrarAvisoLimiteSalsas(limite);
+            return;
+        }
+    }
+
     const actual = wizard.salsasSeleccionadas[nombre] || 0;
     const nueva = Math.max(0, actual + delta);
 
@@ -275,6 +307,24 @@ function ajustarSalsa(nombre, delta, card) {
     actualizarContadorSalsas();
 }
 
+let timeoutAvisoSalsas = null;
+
+function mostrarAvisoLimiteSalsas(limite) {
+    const grid = document.getElementById('salsasGrid');
+    let aviso = document.getElementById('salsasLimiteAviso');
+    if (!aviso) {
+        aviso = document.createElement('p');
+        aviso.id = 'salsasLimiteAviso';
+        aviso.style.cssText = 'background:var(--negro);color:var(--amarillo);font-weight:700;text-align:center;padding:8px 16px;border-radius:var(--r-sm);margin:12px auto 0;max-width:460px;';
+        grid.parentElement.insertBefore(aviso, grid.nextSibling);
+    }
+    aviso.textContent = `Máximo ${limite} salsas para tu pedido. Quitá una para cambiar.`;
+    aviso.style.display = 'block';
+
+    clearTimeout(timeoutAvisoSalsas);
+    timeoutAvisoSalsas = setTimeout(() => { aviso.style.display = 'none'; }, 3000);
+}
+
 function actualizarContadorSalsas() {
     const el = document.getElementById('salsasContador');
     if (!el) return;
@@ -288,7 +338,89 @@ function actualizarContadorSalsas() {
     }
 }
 
-// ─── Paso 5: Resumen y envío ──────────────────────────────────────────────────
+// ─── Paso 5: Dirección de entrega ─────────────────────────────────────────────
+
+function continuarDireccion() {
+    const calle = document.getElementById('inputCalle').value.trim();
+    const numero = document.getElementById('inputNumeroCalle').value.trim();
+    const piso = document.getElementById('inputPiso').value.trim();
+    const observaciones = document.getElementById('inputObservaciones').value.trim();
+
+    if (!calle) { mostrarAlerta('Por favor, completá la calle'); return; }
+    if (!numero) { mostrarAlerta('Por favor, completá el número'); return; }
+
+    wizard.direccion = { calle, numero, piso, observaciones };
+    irAPaso(6);
+}
+
+// ─── Paso 6: Fecha de entrega (selección en cascada mes → día → hora) ─────────
+
+/* Genera las franjas horarias cada 30 minutos entre 10:00 y 21:00 inclusive. */
+function generarHorasEntrega() {
+    const horas = [];
+    for (let h = 10; h <= 21; h++) {
+        horas.push(`${String(h).padStart(2, '0')}:00`);
+        if (h < 21) horas.push(`${String(h).padStart(2, '0')}:30`);
+    }
+    return horas;
+}
+
+/* Configura los selects de mes/día/hora y su revelado en cascada.
+   Se llama una sola vez al cargar la página: los selects no dependen de otro
+   estado del wizard, así que no hace falta reconstruirlos al re-entrar al paso 6. */
+function inicializarFechaEntrega() {
+    const selectMes = document.getElementById('selectMes');
+    const selectDia = document.getElementById('selectDia');
+    const selectHora = document.getElementById('selectHora');
+    const grupoDia = document.getElementById('grupoDia');
+    const grupoHora = document.getElementById('grupoHora');
+
+    MESES.forEach((mes) => {
+        const option = document.createElement('option');
+        option.value = mes;
+        option.textContent = mes;
+        selectMes.appendChild(option);
+    });
+
+    generarHorasEntrega().forEach((hora) => {
+        const option = document.createElement('option');
+        option.value = hora;
+        option.textContent = hora;
+        selectHora.appendChild(option);
+    });
+
+    selectMes.addEventListener('change', () => {
+        wizard.fechaEntrega.mes = selectMes.value;
+        wizard.fechaEntrega.dia = null;
+        wizard.fechaEntrega.hora = null;
+
+        selectDia.innerHTML = '<option value="" disabled selected>Elegí el día</option>';
+        const totalDias = DIAS_POR_MES[selectMes.value] || 31;
+        for (let dia = 1; dia <= totalDias; dia++) {
+            const option = document.createElement('option');
+            option.value = String(dia);
+            option.textContent = String(dia);
+            selectDia.appendChild(option);
+        }
+
+        grupoDia.style.display = 'block';
+        grupoHora.style.display = 'none';
+        selectHora.value = '';
+    });
+
+    selectDia.addEventListener('change', () => {
+        wizard.fechaEntrega.dia = selectDia.value;
+        wizard.fechaEntrega.hora = null;
+        grupoHora.style.display = 'block';
+        selectHora.value = '';
+    });
+
+    selectHora.addEventListener('change', () => {
+        wizard.fechaEntrega.hora = selectHora.value;
+    });
+}
+
+// ─── Paso 6: Resumen y envío ──────────────────────────────────────────────────
 
 function renderResumen() {
     const tipo = wizard.tipoPata;
@@ -310,6 +442,15 @@ function renderResumen() {
         fileteadoTexto = esGratis ? 'Incluido gratis' : '+' + formatearPrecio(costoFileteado);
     }
 
+    const dir = wizard.direccion;
+    const direccionTexto = `${dir.calle} Nº ${dir.numero}${dir.piso ? `, Piso ${dir.piso}` : ''}`;
+    const observacionesRow = dir.observaciones
+        ? `<div class="resumen-row">
+            <span class="resumen-label">📝 OBSERVACIONES:</span>
+            <span class="resumen-valor">${escaparHtml(dir.observaciones)}</span>
+        </div>`
+        : '';
+
     document.getElementById('resumenCard').innerHTML = `
         <div class="resumen-row">
             <span class="resumen-label">${producto.emoji} PATA:</span>
@@ -323,6 +464,11 @@ function renderResumen() {
             <span class="resumen-label">🥫 SALSAS:</span>
             <span class="resumen-valor">${salsasTexto}</span>
         </div>
+        <div class="resumen-row">
+            <span class="resumen-label">📍 DIRECCIÓN:</span>
+            <span class="resumen-valor">${escaparHtml(direccionTexto)}</span>
+        </div>
+        ${observacionesRow}
         <div class="resumen-total">
             <span>TOTAL</span>
             <span>${formatearPrecio(total)}</span>
@@ -331,11 +477,14 @@ function renderResumen() {
 }
 
 async function enviarPedido() {
+    const { mes, dia, hora } = wizard.fechaEntrega;
+    if (!mes || !dia || !hora) { mostrarAlerta('Por favor seleccioná la fecha y hora de entrega'); return; }
+
     const nombre = document.getElementById('inputNombre').value.trim();
     const telefono = document.getElementById('inputTelefono').value.trim();
 
-    if (!nombre) { alert('Por favor, completá tu nombre'); return; }
-    if (!telefono) { alert('Por favor, completá tu número de WhatsApp'); return; }
+    if (!nombre) { mostrarAlerta('Por favor, completá tu nombre'); return; }
+    if (!telefono) { mostrarAlerta('Por favor, completá tu número de WhatsApp'); return; }
 
     const tipo = wizard.tipoPata;
     const indice = wizard.indiceVariante;
@@ -346,6 +495,13 @@ async function enviarPedido() {
     const payload = {
         nombreCliente: nombre,
         telefonoCliente: telefono,
+        fechaEntrega: { mes, dia, hora },
+        direccion: {
+            calle: wizard.direccion.calle,
+            numero: wizard.direccion.numero,
+            piso: wizard.direccion.piso,
+            observaciones: wizard.direccion.observaciones
+        },
         salsas: Object.entries(wizard.salsasSeleccionadas)
             .filter(([, c]) => c > 0)
             .map(([nombre, cant]) => cant > 1 ? `${nombre} ×${cant}` : nombre),
@@ -380,13 +536,13 @@ async function enviarPedido() {
                 btn.textContent = 'ENVIAR PEDIDO POR WHATSAPP';
             }, 3000);
         } else {
-            alert('Error: ' + (result.error || 'No se pudo enviar el pedido'));
+            mostrarAlerta('Error: ' + (result.error || 'No se pudo enviar el pedido'));
             btn.disabled = false;
             btn.textContent = 'ENVIAR PEDIDO POR WHATSAPP';
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error al enviar el pedido. Intenta de nuevo.');
+        mostrarAlerta('Error al enviar el pedido. Intenta de nuevo.');
         btn.disabled = false;
         btn.textContent = 'ENVIAR PEDIDO POR WHATSAPP';
     }
@@ -398,9 +554,20 @@ function resetWizard() {
     wizard.indiceVariante = null;
     wizard.tieneFileteado = false;
     wizard.salsasSeleccionadas = {};
+    wizard.direccion = { calle: '', numero: '', piso: '', observaciones: '' };
+    wizard.fechaEntrega = { mes: null, dia: null, hora: null };
 
     document.getElementById('inputNombre').value = '';
     document.getElementById('inputTelefono').value = '';
+    document.getElementById('inputCalle').value = '';
+    document.getElementById('inputNumeroCalle').value = '';
+    document.getElementById('inputPiso').value = '';
+    document.getElementById('inputObservaciones').value = '';
+    document.getElementById('selectMes').value = '';
+    document.getElementById('selectDia').innerHTML = '<option value="" disabled selected>Elegí el día</option>';
+    document.getElementById('selectHora').value = '';
+    document.getElementById('grupoDia').style.display = 'none';
+    document.getElementById('grupoHora').style.display = 'none';
     document.getElementById('successMessage').classList.remove('show');
     document.getElementById('cardCerdo').classList.remove('seleccionado');
     document.getElementById('cardVaca').classList.remove('seleccionado');
@@ -415,6 +582,13 @@ function resetWizard() {
 
 function formatearPrecio(precio) {
     return '$' + precio.toLocaleString('es-AR');
+}
+
+/* Escapa texto ingresado por el usuario antes de insertarlo con innerHTML */
+function escaparHtml(texto) {
+    const div = document.createElement('div');
+    div.textContent = texto;
+    return div.innerHTML;
 }
 
 function animarConfeti() {

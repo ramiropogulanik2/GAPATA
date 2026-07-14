@@ -85,7 +85,7 @@ const MAX_PEDIDOS_EN_MEMORIA = 500;
 
 /* Nombres de las columnas de la hoja 'Pedidos' en el orden exacto en que se
    escriben. Deben coincidir con pedidoToRow() o los datos quedarán desalineados. */
-const ENCABEZADOS_PEDIDO = ['ID', 'Fecha', 'Cliente', 'Teléfono', 'Tipo', 'Personas', 'Precio', 'Fileteado', 'Salsas', 'Total', 'Estado'];
+const ENCABEZADOS_PEDIDO = ['ID', 'Fecha', 'Cliente', 'Teléfono', 'Tipo', 'Personas', 'Precio', 'Fileteado', 'Salsas', 'Total', 'Estado', 'Calle', 'Numero', 'Piso', 'Observaciones', 'Mes', 'Dia', 'Hora'];
 
 // ─── Estado en memoria ───────────────────────────────────────────────────────
 
@@ -554,6 +554,33 @@ async function construirPedidoValido(body) {
     ? body.salsas.map(s => normalizarTexto(s, 80)).filter(Boolean).slice(0, 20)
     : [];
 
+  // Sanitiza la dirección de entrega: cada campo con su propio límite de longitud
+  const direccionBody = (body.direccion && typeof body.direccion === 'object') ? body.direccion : {};
+  const direccion = {
+    calle: normalizarTexto(direccionBody.calle, 100),
+    numero: normalizarTexto(direccionBody.numero, 20),
+    piso: normalizarTexto(direccionBody.piso, 30),
+    observaciones: normalizarTexto(direccionBody.observaciones, 300)
+  };
+
+  // Calle y número son obligatorios para poder entregar el pedido
+  if (!direccion.calle || !direccion.numero) {
+    throw new Error('La dirección es obligatoria');
+  }
+
+  // Sanitiza la fecha de entrega elegida en el paso 6 (selección en cascada mes/día/hora)
+  const fechaEntregaBody = (body.fechaEntrega && typeof body.fechaEntrega === 'object') ? body.fechaEntrega : {};
+  const fechaEntrega = {
+    mes: normalizarTexto(fechaEntregaBody.mes, 20),
+    dia: normalizarTexto(fechaEntregaBody.dia, 20),
+    hora: normalizarTexto(fechaEntregaBody.hora, 20)
+  };
+
+  // Mes, día y hora son obligatorios: sin fecha de entrega no se puede coordinar el pedido
+  if (!fechaEntrega.mes || !fechaEntrega.dia || !fechaEntrega.hora) {
+    throw new Error('La fecha de entrega es obligatoria');
+  }
+
   // Validación básica: nombre, teléfono, y entre 1 y 10 ítems
   if (!nombreCliente || !validarTelefono(telefonoCliente) || items.length === 0 || items.length > 10) {
     throw new Error('Datos de pedido invalidos');
@@ -566,7 +593,7 @@ async function construirPedidoValido(body) {
   // El total es la suma de precios base + costos de fileteado de todos los ítems
   const total = itemsValidados.reduce((sum, item) => sum + item.precioUnitario + item.costoFileteado, 0);
 
-  return { nombreCliente, telefonoCliente, items: itemsValidados, salsas, total };
+  return { nombreCliente, telefonoCliente, direccion, fechaEntrega, items: itemsValidados, salsas, total };
 }
 
 /* Valida un ítem individual del pedido contra el catálogo de productos.
@@ -700,7 +727,7 @@ app.post('/api/pedido', limitarPedidos, async (req, res) => {
     const id = generarId();
     const pedido = {
       id,
-      ...pedidoValido, // Expande: nombreCliente, telefonoCliente, items, salsas, total
+      ...pedidoValido, // Expande: nombreCliente, telefonoCliente, direccion, fechaEntrega, items, salsas, total
       estado: 'pendiente', // Estado inicial antes de que el dueño confirme
       fechaCreacion: new Date().toISOString() // ISO 8601 en UTC para almacenamiento
     };
@@ -722,15 +749,31 @@ app.post('/api/pedido', limitarPedidos, async (req, res) => {
     const salsasTexto = pedido.salsas.length > 0
       ? `\n🥫 *Salsas:* ${pedido.salsas.join(', ')}`
       : '';
+    // Dirección de entrega: piso solo si el cliente lo completó
+    const direccion = pedido.direccion || {};
+    const direccionLinea = direccion.calle
+      ? `\n📍 *Dirección:* Calle ${direccion.calle} Nº ${direccion.numero}${direccion.piso ? `, Piso ${direccion.piso}` : ''}`
+      : '';
+    const observacionesLinea = direccion.observaciones
+      ? `\n📝 *Observaciones:* ${direccion.observaciones}`
+      : '';
+    // Fecha de entrega elegida en el paso 6 (mes/día/hora)
+    const fechaEntrega = pedido.fechaEntrega || {};
+    const fechaEntregaLinea = fechaEntrega.mes
+      ? `📅 *Fecha de entrega:* ${fechaEntrega.dia} de ${fechaEntrega.mes} a las ${fechaEntrega.hora}hs\n\n`
+      : '';
 
     // El link de confirmación lleva al dueño a /confirmar/:id para registrar el pedido
     const linkConfirmacion = `${BASE_URL}/confirmar/${id}`;
     // El asterisco (*texto*) es el formato de negrita de WhatsApp
     const mensaje =
       `🛒 *Nuevo Pedido* de ${pedido.nombreCliente}\n\n` +
+      fechaEntregaLinea +
       `${emoji} *${tipoNombre}* (${item.cantidad} personas): $${item.precioUnitario.toLocaleString('es-AR')}` +
       fileteadoLinea +
       salsasTexto +
+      direccionLinea +
+      observacionesLinea +
       `\n\n*Total: $${pedido.total.toLocaleString('es-AR')}*` +
       `\n*Teléfono:* ${pedido.telefonoCliente}\n\n` +
       `Confirmar pedido: ${linkConfirmacion}`;
@@ -986,6 +1029,7 @@ const whatsappClient = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
     headless: true, // Corre el browser sin ventana visible
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -1043,15 +1087,16 @@ whatsappClient.on('disconnected', (reason) => {
    para chats individuales (los grupos tienen el sufijo '@g.us').
    Lanza el error si sendMessage falla, para que el llamador pueda manejarlo. */
 async function enviarMensaje(numero, texto) {
-  const chatId = `${numero}@c.us`; // Formato requerido por la API de WhatsApp Web
-  console.log('Intentando enviar a:', numero, 'texto:', texto);
+  console.log('Intentando enviar a:', numero);
   try {
-    const mensaje = await whatsappClient.sendMessage(chatId, texto);
+    const numberId = await whatsappClient.getNumberId(numero);
+    if (!numberId) throw new Error(`Número no encontrado: ${numero}`);
+    const mensaje = await whatsappClient.sendMessage(numberId._serialized, texto);
     console.log(`Mensaje enviado a ${numero}`);
     return mensaje;
   } catch (err) {
     console.error('Error real de sendMessage:', err.message, err.stack);
-    throw err; // Re-lanza para que el handler de la ruta pueda logear el error
+    throw err;
   }
 }
 
@@ -1177,13 +1222,15 @@ async function escribirHoja(nombre, filas) {
 
 /* Convierte un objeto pedido a un array plano con los valores en el orden exacto
    de ENCABEZADOS_PEDIDO: [ID, Fecha, Cliente, Teléfono, Tipo, Personas, Precio,
-   Fileteado, Salsas, Total, Estado].
+   Fileteado, Salsas, Total, Estado, Calle, Numero, Piso, Observaciones, Mes, Dia, Hora].
    Este array es lo que se escribe directamente en una fila de Google Sheets. */
 function pedidoToRow(pedido) {
   const item = pedido.items[0] || {};
   // Capitaliza el tipo para mostrarlo legible en Sheets: 'cerdo' → 'Cerdo'
   const tipo = item.tipo ? (item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1)) : '';
   const fileteadoTexto = item.tieneFileteado ? 'Sí' : 'No';
+  const direccion = pedido.direccion || {};
+  const fechaEntrega = pedido.fechaEntrega || {};
 
   return [
     pedido.id,
@@ -1196,7 +1243,14 @@ function pedidoToRow(pedido) {
     fileteadoTexto,
     (pedido.salsas || []).join(', '), // Array de salsas → string separado por coma
     pedido.total,
-    pedido.estado // 'pendiente' o 'confirmado'
+    pedido.estado, // 'pendiente' o 'confirmado'
+    direccion.calle || '',
+    direccion.numero || '',
+    direccion.piso || '',
+    direccion.observaciones || '',
+    fechaEntrega.mes || '',
+    fechaEntrega.dia || '',
+    fechaEntrega.hora || ''
   ];
 }
 
@@ -1213,7 +1267,7 @@ async function guardarEnSheet(pedido) {
   // Siempre escribe los encabezados en la primera fila para que no se pierdan
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A1:K1`,
+    range: `${SHEET_NAME}!A1:R1`,
     valueInputOption: 'RAW',
     requestBody: { values: [ENCABEZADOS_PEDIDO] }
   });
@@ -1225,7 +1279,7 @@ async function guardarEnSheet(pedido) {
     // El pedido ya existe: actualiza la fila en su posición exacta (rowNumber)
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A${existente.rowNumber}:K${existente.rowNumber}`,
+      range: `${SHEET_NAME}!A${existente.rowNumber}:R${existente.rowNumber}`,
       valueInputOption: 'RAW',
       requestBody: { values: [row] }
     });
@@ -1233,7 +1287,7 @@ async function guardarEnSheet(pedido) {
     // Pedido nuevo: agrega una fila al final de la hoja con append()
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:K`,
+      range: `${SHEET_NAME}!A:R`,
       valueInputOption: 'RAW',
       requestBody: { values: [row] }
     });
@@ -1255,7 +1309,7 @@ async function buscarPedidoEnSheet(id) {
   const sheets = await getSheetsClient();
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A:K` // Lee las 11 columnas de pedidos
+    range: `${SHEET_NAME}!A:R` // Lee las 18 columnas de pedidos
   });
 
   const rows = response.data.values || [];
@@ -1286,7 +1340,20 @@ async function buscarPedidoEnSheet(id) {
       }],
       salsas: row[8] ? row[8].split(', ').filter(Boolean) : [], // Reconstruye el array de salsas
       total: Number(row[9]) || 0,
-      estado: row[10] || 'pendiente'
+      estado: row[10] || 'pendiente',
+      // Reconstruye la dirección para no pisarla con vacío al re-guardar la fila
+      direccion: {
+        calle: row[11] || '',
+        numero: row[12] || '',
+        piso: row[13] || '',
+        observaciones: row[14] || ''
+      },
+      // Reconstruye la fecha de entrega para no pisarla con vacío al re-guardar la fila
+      fechaEntrega: {
+        mes: row[15] || '',
+        dia: row[16] || '',
+        hora: row[17] || ''
+      }
     }
   };
 }

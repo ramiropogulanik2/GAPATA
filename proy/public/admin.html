@@ -364,6 +364,94 @@
                 font-size: 11px;
             }
         }
+
+        /* Modal de alerta / confirmación */
+        .modal-alerta-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.65);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-alerta-overlay.show { display: flex; }
+
+        .modal-alerta-card {
+            background: var(--negro);
+            border: 3px solid var(--amarillo);
+            border-radius: 8px;
+            max-width: 400px;
+            width: 100%;
+            padding: 28px 24px;
+            box-shadow: 0 8px 36px rgba(0,0,0,.4);
+            text-align: center;
+        }
+
+        .modal-alerta-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .modal-alerta-icono { font-size: 36px; line-height: 1; }
+
+        .modal-alerta-titulo {
+            color: var(--amarillo);
+            font-size: 16px;
+            letter-spacing: 2px;
+        }
+
+        .modal-alerta-mensaje {
+            color: var(--blanco);
+            font-size: 13px;
+            line-height: 1.5;
+            margin-bottom: 22px;
+            text-transform: none;
+            letter-spacing: 0.5px;
+        }
+
+        .modal-alerta-botones {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .modal-alerta-btn {
+            flex: 1;
+            padding: 12px 18px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            border: 2px solid var(--amarillo);
+            transition: all 0.3s ease;
+        }
+
+        .modal-alerta-btn-aceptar {
+            background: var(--amarillo);
+            color: var(--negro);
+        }
+
+        .modal-alerta-btn-aceptar:hover { background: #FFE55C; }
+
+        .modal-alerta-btn-cancelar {
+            background: transparent;
+            color: var(--amarillo);
+        }
+
+        .modal-alerta-btn-cancelar:hover {
+            background: var(--amarillo);
+            color: var(--negro);
+        }
+
+        .modal-alerta-btn-cancelar.oculto { display: none; }
     </style>
 </head>
 <body>
@@ -436,6 +524,22 @@
         </div>
     </div>
 
+    <!-- Modal de alerta / confirmación (reemplaza alert()/confirm() nativos) -->
+    <div id="modal-alerta" class="modal-alerta-overlay">
+        <div class="modal-alerta-card">
+            <div class="modal-alerta-header">
+                <span class="modal-alerta-icono" id="modalAlertaIcono">⚠️</span>
+                <h3 class="modal-alerta-titulo" id="modalAlertaTitulo">Atención</h3>
+            </div>
+            <p class="modal-alerta-mensaje" id="modalAlertaMensaje"></p>
+            <div class="modal-alerta-botones">
+                <button class="modal-alerta-btn modal-alerta-btn-cancelar" id="modalAlertaCancelar">CANCELAR</button>
+                <button class="modal-alerta-btn modal-alerta-btn-aceptar" id="modalAlertaAceptar">ACEPTAR</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/modalAlerta.js"></script>
     <script src="js/admin.js"></script>
 </body>
 </html>

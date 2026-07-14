@@ -62,9 +62,8 @@ async function handleLogin(event) {
 }
 
 async function resetHojas() {
-    if (!confirm('¿Estás seguro? Esto eliminará todos los datos de Productos y Salsas y los recreará con los valores iniciales.')) {
-        return;
-    }
+    const confirmado = await mostrarConfirm('¿Estás seguro? Esto eliminará todos los datos de Productos y Salsas y los recreará con los valores iniciales.');
+    if (!confirmado) return;
 
     try {
         const response = await fetch('/api/admin/reset-hojas', {
@@ -74,14 +73,14 @@ async function resetHojas() {
         });
 
         if (response.ok) {
-            alert('Datos reseteados. Recargando página...');
+            await mostrarAlerta('Datos reseteados. Recargando página...', 'exito');
             location.reload();
         } else {
-            alert('Error al resetear datos');
+            await mostrarAlerta('Error al resetear datos');
         }
     } catch (err) {
         console.error('Error:', err);
-        alert('Error al resetear datos');
+        await mostrarAlerta('Error al resetear datos');
     }
 }
 

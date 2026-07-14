@@ -28,6 +28,7 @@
 
 /* ─── Reset & Base ─────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+* { touch-action: pan-x pan-y; } /* Permite scroll normal pero bloquea el zoom por doble tap */
 html { scroll-behavior: smooth; }
 
 img {
@@ -558,27 +559,27 @@ body {
    WIZARD
 ══════════════════════════════════════════════════════ */
 
-.paso { display: none; }
+.paso { display: none; opacity: 0; }
 
 .paso.active {
     display: block;
-    animation: slideIn var(--t-med);
+    animation: fadeIn 0.25s ease forwards;
 }
 
 .paso.saliendo {
     display: block;
-    animation: slideOut 0.2s ease forwards;
+    animation: fadeOut 0.15s ease forwards;
     pointer-events: none;
 }
 
-@keyframes slideIn {
-    from { opacity: 0; transform: translateX(28px); }
-    to   { opacity: 1; transform: translateX(0); }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes slideOut {
-    from { opacity: 1; transform: translateX(0); }
-    to   { opacity: 0; transform: translateX(-28px); }
+@keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-8px); }
 }
 
 /* ─── Progress bar ────────────────────────────────── */
@@ -1098,7 +1099,9 @@ body {
 }
 
 .form-group input[type="text"],
-.form-group input[type="tel"] {
+.form-group input[type="tel"],
+.form-group textarea,
+.form-group select {
     padding: 15px 16px;
     border: 2px solid var(--gris-borde);
     border-radius: var(--r-sm);
@@ -1109,9 +1112,30 @@ body {
     letter-spacing: 0.5px;
     transition: border-color var(--t-fast), box-shadow var(--t-fast);
     box-shadow: var(--s-xs);
+    resize: vertical;
 }
 
-.form-group input:focus {
+.form-group select {
+    cursor: pointer;
+    width: 100%;
+}
+
+/* ─── Paso 6: Bloque de fecha de entrega (mes/día/hora en cascada) ────── */
+.fecha-entrega-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 100%;
+    margin-bottom: 14px;
+}
+
+.fecha-entrega-grupo .form-group {
+    margin-bottom: 0;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
     outline: none;
     border-color: var(--negro);
     box-shadow: 0 0 0 3px rgba(255,208,0,.30);
@@ -1192,6 +1216,100 @@ body {
     from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Modal de alerta / confirmación ──────────────────── */
+.modal-alerta-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.65);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-alerta-overlay.show { display: flex; }
+
+.modal-alerta-card {
+    background: var(--negro);
+    border: 3px solid var(--amarillo);
+    border-radius: var(--r-md);
+    max-width: 400px;
+    width: 100%;
+    padding: 28px 24px;
+    box-shadow: var(--s-lg);
+    text-align: center;
+    animation: modalAlertaIn 0.2s ease;
+}
+
+@keyframes modalAlertaIn {
+    from { opacity: 0; transform: scale(.92); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.modal-alerta-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.modal-alerta-icono { font-size: 36px; line-height: 1; }
+
+.modal-alerta-titulo {
+    color: var(--amarillo);
+    font-size: 16px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.modal-alerta-mensaje {
+    color: var(--blanco);
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 22px;
+}
+
+.modal-alerta-botones {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.modal-alerta-btn {
+    flex: 1;
+    padding: 13px 18px;
+    border-radius: var(--r-sm);
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 2px solid var(--amarillo);
+    transition: background var(--t-fast), color var(--t-fast);
+}
+
+.modal-alerta-btn-aceptar {
+    background: var(--amarillo);
+    color: var(--negro);
+}
+
+.modal-alerta-btn-aceptar:hover { background: #FFE55C; }
+
+.modal-alerta-btn-cancelar {
+    background: transparent;
+    color: var(--amarillo);
+}
+
+.modal-alerta-btn-cancelar:hover {
+    background: var(--amarillo);
+    color: var(--negro);
+}
+
+.modal-alerta-btn-cancelar.oculto { display: none; }
 
 /* ══════════════════════════════════════════════════════
    DESKTOP
