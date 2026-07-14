@@ -530,11 +530,14 @@ async function enviarPedido() {
             document.getElementById('successMessage').classList.add('show');
             animarConfeti();
 
+            // Muestra la confirmación un instante y luego abre WhatsApp con el mensaje
+            // pre-cargado para que el cliente lo envíe al dueño desde su propio WhatsApp.
             setTimeout(() => {
                 resetWizard();
                 btn.disabled = false;
                 btn.textContent = 'ENVIAR PEDIDO POR WHATSAPP';
-            }, 3000);
+                if (result.linkWhatsapp) window.location.href = result.linkWhatsapp;
+            }, 1500);
         } else {
             mostrarAlerta('Error: ' + (result.error || 'No se pudo enviar el pedido'));
             btn.disabled = false;

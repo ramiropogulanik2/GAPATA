@@ -20,15 +20,6 @@ const helmet = require('helmet');
    cada request y las expone en req.cookies. Se usa para leer el token de admin. */
 const cookieParser = require('cookie-parser');
 
-/* whatsapp-web.js: librería que controla WhatsApp Web mediante Puppeteer (browser
-   headless). Client es el cliente de WhatsApp; LocalAuth guarda la sesión en disco
-   para no tener que escanear el QR cada vez que se reinicia el servidor. */
-const { Client, LocalAuth } = require('whatsapp-web.js');
-
-/* qrcode-terminal: convierte un string de QR en arte ASCII para mostrarlo
-   directamente en la terminal. Se usa al iniciar WhatsApp por primera vez. */
-const qrcode = require('qrcode-terminal');
-
 /* googleapis: SDK oficial de Google para Node.js. Da acceso a todos los servicios
    de Google; aquí se usa exclusivamente la API de Google Sheets v4. */
 const { google } = require('googleapis');
@@ -58,12 +49,9 @@ const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
    Por defecto 'Pedidos'. Productos y Salsas tienen hojas con nombre fijo en el código. */
 const SHEET_NAME = process.env.SHEET_NAME || 'Pedidos';
 
-/* Número de WhatsApp al que se envía el mensaje de prueba cuando el bot se conecta.
-   Formato internacional sin '+' ni espacios (Argentina: 549 + código de área + número). */
-const NUMERO_TEST = process.env.NUMERO_TEST || '5493516622633';
-
-/* Número de WhatsApp del dueño del negocio. Recibe la notificación de cada
-   nuevo pedido con el detalle y el link de confirmación. */
+/* Número de WhatsApp del dueño del negocio. Es el destinatario del link wa.me que
+   arma el frontend: el cliente confirma el pedido enviándole el mensaje desde su
+   propio WhatsApp. Formato internacional sin '+' ni espacios (Argentina: 549 + área + número). */
 const NUMERO_DUENO = process.env.NUMERO_DUENO || '5493516622633';
 
 /* Contraseña para acceder al panel de administración (/admin). Si no está definida,
@@ -718,8 +706,9 @@ function normalizarSalsaAdmin(salsa) {
    4. El pedido se guarda en el array en memoria (pedidos) con estado 'pendiente'.
    5. Se guarda en Google Sheets para persistencia permanente.
    6. Se arma el mensaje de WhatsApp con el detalle del pedido y el link de confirmación.
-   7. Se envía el mensaje al número del dueño (NUMERO_DUENO) via WhatsApp.
-   8. Se responde al frontend con { success: true, id } para que muestre la confirmación. */
+   7. Se construye un link wa.me hacia NUMERO_DUENO con el mensaje pre-cargado.
+   8. Se responde al frontend con { success: true, id, linkWhatsapp }; el cliente es
+      redirigido a ese link para enviar el mensaje al dueño desde su propio WhatsApp. */
 app.post('/api/pedido', limitarPedidos, async (req, res) => {
   try {
     const pedidoValido = await construirPedidoValido(req.body);
@@ -735,7 +724,7 @@ app.post('/api/pedido', limitarPedidos, async (req, res) => {
     limitarPedidosEnMemoria(); // Evita que el array crezca sin límite
     await guardarEnSheet(pedido); // Persistencia en Google Sheets
 
-    // Arma el mensaje de WhatsApp con el detalle del pedido
+    // Arma el mensaje de WhatsApp que el cliente enviará al dueño vía link wa.me
     const item = pedido.items[0] || {};
     const emoji = item.tipo === 'cerdo' ? '🐷' : '🐮';
     // Capitaliza el tipo: 'cerdo' → 'Cerdo'
@@ -778,9 +767,11 @@ app.post('/api/pedido', limitarPedidos, async (req, res) => {
       `\n*Teléfono:* ${pedido.telefonoCliente}\n\n` +
       `Confirmar pedido: ${linkConfirmacion}`;
 
-    await enviarMensaje(NUMERO_DUENO, mensaje);
+    // El cliente abre este link y envía el mensaje al dueño desde su propio WhatsApp
+    const mensajeCodificado = encodeURIComponent(mensaje);
+    const linkWhatsapp = `https://wa.me/${NUMERO_DUENO}?text=${mensajeCodificado}`;
 
-    res.json({ success: true, id });
+    res.json({ success: true, id, linkWhatsapp });
   } catch (err) {
     console.error('Error procesando pedido:', err);
     res.status(500).json({ success: false, error: 'Error interno del servidor' });
@@ -1013,92 +1004,6 @@ app.post('/api/admin/reset-hojas', verificarAdmin, async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
-
-// ─── WhatsApp ────────────────────────────────────────────────────────────────
-
-/* Crea el cliente de WhatsApp Web usando Puppeteer (browser Chrome headless).
-   LocalAuth guarda la sesión en disco (carpeta .wwebjs_auth/) para que al
-   reiniciar el servidor no haya que escanear el QR de nuevo.
-   Los args de Puppeteer son necesarios para correr en entornos sin interfaz
-   gráfica como servidores Linux o contenedores Docker:
-   - --no-sandbox: deshabilita el sandbox de Chromium (requerido en Linux sin root)
-   - --disable-setuid-sandbox: necesario junto al anterior
-   - --disable-dev-shm-usage: evita problemas con /dev/shm de tamaño limitado en Docker
-   - --disable-gpu: no hay GPU en servidores, evita errores de renderizado */
-const whatsappClient = new Client({
-  authStrategy: new LocalAuth(),
-  puppeteer: {
-    headless: true, // Corre el browser sin ventana visible
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu'
-    ]
-  }
-});
-
-/* Evento 'qr': se dispara cuando WhatsApp Web genera un código QR para autenticar.
-   Ocurre la primera vez que se inicia o cuando la sesión guardada es inválida.
-   qrcode.generate() imprime el QR como arte ASCII en la terminal para que el
-   dueño lo escanee con la cámara de WhatsApp en su celular. */
-whatsappClient.on('qr', (qr) => {
-  console.log('Escaneá el siguiente código QR con WhatsApp:');
-  qrcode.generate(qr, { small: true }); // small: true reduce el tamaño del QR en terminal
-});
-
-/* Evento 'authenticated': se dispara cuando WhatsApp verificó las credenciales
-   exitosamente (después de escanear el QR o al cargar una sesión guardada).
-   No significa que el cliente esté listo para enviar mensajes aún. */
-whatsappClient.on('authenticated', () => {
-  console.log('WhatsApp autenticado correctamente');
-});
-
-/* Evento 'auth_failure': se dispara si la autenticación falla (ej: QR expiró,
-   sesión inválida, cuenta baneada). En este caso hay que reiniciar el servidor
-   y escanear el QR nuevamente. */
-whatsappClient.on('auth_failure', (msg) => {
-  console.error('Falló la autenticación de WhatsApp:', msg);
-});
-
-/* Evento 'ready': se dispara cuando el cliente está completamente inicializado
-   y puede enviar y recibir mensajes. Es el estado final exitoso.
-   Se envía un mensaje de prueba a NUMERO_TEST para verificar que la conexión
-   funciona correctamente. Si falla, se logea el error pero no se interrumpe el servidor. */
-whatsappClient.on('ready', async () => {
-  console.log('Cliente de WhatsApp listo y conectado');
-  try {
-    await enviarMensaje(NUMERO_TEST, 'Hola, mensaje de prueba desde el bot');
-  } catch (err) {
-    console.error('Error en el envío de prueba:', err.message);
-  }
-});
-
-/* Evento 'disconnected': se dispara cuando WhatsApp se desconecta (pérdida de
-   internet, cierre de sesión desde el celular, etc.). El cliente no se reconecta
-   automáticamente; hay que reiniciar el servidor o implementar lógica de reconexión. */
-whatsappClient.on('disconnected', (reason) => {
-  console.log('WhatsApp desconectado:', reason);
-});
-
-/* Envía un mensaje de texto a un número de WhatsApp.
-   El formato del chatId es '{número}@c.us' — es el ID interno de WhatsApp Web
-   para chats individuales (los grupos tienen el sufijo '@g.us').
-   Lanza el error si sendMessage falla, para que el llamador pueda manejarlo. */
-async function enviarMensaje(numero, texto) {
-  console.log('Intentando enviar a:', numero);
-  try {
-    const numberId = await whatsappClient.getNumberId(numero);
-    if (!numberId) throw new Error(`Número no encontrado: ${numero}`);
-    const mensaje = await whatsappClient.sendMessage(numberId._serialized, texto);
-    console.log(`Mensaje enviado a ${numero}`);
-    return mensaje;
-  } catch (err) {
-    console.error('Error real de sendMessage:', err.message, err.stack);
-    throw err;
-  }
-}
 
 // ─── Google Sheets ────────────────────────────────────────────────────────────
 
@@ -1360,12 +1265,9 @@ async function buscarPedidoEnSheet(id) {
 
 // ─── Servidor ─────────────────────────────────────────────────────────────────
 
-/* Inicia el servidor Express en el puerto configurado y, una vez levantado,
-   inicializa el cliente de WhatsApp (abre Puppeteer, carga la sesión guardada
-   o muestra el QR si no hay sesión). Se hace dentro del callback de listen()
-   para asegurarse de que el servidor HTTP esté escuchando antes de intentar
-   conectar WhatsApp, que puede tardar varios segundos. */
+/* Inicia el servidor Express en el puerto configurado.
+   El envío de WhatsApp ya no depende del servidor: cada pedido devuelve un link
+   wa.me que el cliente abre para mandar el mensaje al dueño desde su propio WhatsApp. */
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);
-  whatsappClient.initialize(); // Arranca Puppeteer y el proceso de autenticación de WhatsApp
 });
