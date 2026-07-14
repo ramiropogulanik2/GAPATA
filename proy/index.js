@@ -1023,11 +1023,16 @@ app.post('/api/admin/reset-hojas', verificarAdmin, async (req, res) => {
       para hacer llamadas a la API de Sheets v4. */
 async function getSheetsClient() {
   const auth = new google.auth.GoogleAuth({
-    keyFile: GOOGLE_CREDENTIALS_PATH, // Ruta al JSON de credenciales de la Service Account
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'] // Permiso: leer y escribir Sheets
+    credentials: process.env.GOOGLE_CREDENTIALS_JSON
+      ? JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON)
+      : undefined,
+    keyFile: process.env.GOOGLE_CREDENTIALS_JSON
+      ? undefined
+      : GOOGLE_CREDENTIALS_PATH,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets']
   });
-  const authClient = await auth.getClient(); // Obtiene el cliente autenticado con token OAuth2
-  return google.sheets({ version: 'v4', auth: authClient }); // Retorna el cliente de la API
+  const authClient = await auth.getClient();
+  return google.sheets({ version: 'v4', auth: authClient });
 }
 
 /* Garantiza que una hoja con el nombre dado exista en el Spreadsheet.
