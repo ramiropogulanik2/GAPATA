@@ -773,6 +773,7 @@ app.post('/api/pedido', limitarPedidos, async (req, res) => {
 
     res.json({ success: true, id, linkWhatsapp });
   } catch (err) {
+    console.error('Body recibido:', JSON.stringify(req.body, null, 2));
     console.error('Error procesando pedido:', err);
     res.status(500).json({ success: false, error: 'Error interno del servidor' });
   }
